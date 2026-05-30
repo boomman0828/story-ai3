@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aether</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  width:100%; height:100%;
+  background:#080604;
+  color:#f0e8d0;
+  font-family:'Noto Sans KR',sans-serif;
+  overflow:hidden;
+}
+
+/* 페이지 */
+.page {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transform:translateX(20px);
+  transition:opacity .2s, transform .2s;
+}
+.page.active { opacity:1; pointer-events:auto; transform:translateX(0); }
+.page.out { transform:translateX(-20px); }
+#pg-msg { display:flex; flex-direction:column; }
+
+/* 탭바 */
+.tabbar {
+  position:fixed; bottom:0; left:0; right:0;
+  height:60px; background:#060504;
+  display:flex; align-items:stretch;
+  z-index:50;
+}
+.tabbar::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent);
+}
+.tab-item {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px;
+  border:none; background:none;
+  color:#3a2810; font-size:10px;
+  font-family:'Cormorant Garamond',serif; font-style:italic;
+  cursor:pointer; transition:color .2s;
+  -webkit-appearance:none;
+}
+.tab-item.on { color:#c9a04b; }
+.ti { font-size:19px; line-height:1; }
+.has-tab { padding-bottom:60px; }
+
+/* 골드선 */
+.gline { height:1px; flex-shrink:0; background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent); }
+
+/* 스크롤 영역 */
+.scr { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+.scr::-webkit-scrollbar { width:1px; }
+.scr::-webkit-scrollbar-thumb { background:#3a2810; }
+
+/* 홈 헤더 */
+.home-hd { display:flex; align-items:center; justify-content:space-between; padding:52px 20px 14px; background:#080604; flex-shrink:0; }
+.logo { font-family:'Cormorant Garamond',serif; font-size:34px; font-style:italic; letter-spacing:0.1em; color:#c9a04b; text-shadow:0 0 24px rgba(201,160,75,0.4); }
+.home-search { width:36px; height:36px; border-radius:50%; border:1px solid #3a2810; background:#0e0c07; display:flex; align-items:center; justify-content:center; color:#6b4e10; font-size:14px; cursor:pointer; }
+
+/* 배너 */
+.banner { margin:14px 16px 20px; background:linear-gradient(160deg,#100d04,#080600); border:1px solid #2e2210; border-radius:14px; padding:20px; position:relative; overflow:hidden; }
+.banner::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent); }
+.banner::after { content:'✦'; position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:52px; color:#2e2210; opacity:0.6; font-family:'Cormorant Garamond',serif; line-height:1; }
+.banner-tag { display:inline-block; background:rgba(201,160,75,0.1); color:#c9a04b; font-size:10px; padding:4px 12px; border-radius:20px; margin-bottom:10px; letter-spacing:0.1em; border:1px solid rgba(201,160,75,0.2); font-family:'Cormorant Garamond',serif; font-style:italic; }
+.banner-title { font-size:17px; font-weight:500; line-height:1.55; margin-bottom:5px; }
+.banner-sub { font-size:12px; color:#6b5030; }
+
+/* 섹션 */
+.sec-hd { display:flex; align-items:center; justify-content:space-between; padding:0 16px; margin-bottom:12px; }
+.sec-title { font-family:'Cormorant Garamond',serif; font-size:16px; font-style:italic; color:#c9a04b; letter-spacing:0.06em; }
+.sec-more { font-size:12px; color:#6b4e10; cursor:pointer; }
+
+/* 내 캐릭터 */
+.my-row { display:flex; gap:10px; padding:0 16px 20px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.my-row::-webkit-scrollbar { display:none; }
+.my-card { flex-shrink:0; width:104px; background:#0e0c07; border:1px solid #2a2008; border-radius:12px; overflow:hidden; cursor:pointer; position:relative; }
+.my-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#6b4e10,transparent); z-index:1; }
+.my-card-img { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:30px; font-style:italic; overflow:hidden; }
+.my-card-name { font-size:12px; padding:6px 10px 3px; color:#f0e8d0; }
+.my-card-sub { font-size:10px; padding:0 10px 8px; color:#5a4020; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.add-card { flex-shrink:0; width:104px; height:104px; background:#0e0c07; border:1.5px dashed #3a2810; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; color:#4a3818; font-size:11px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.add-card-icon { font-size:22px; color:#6b4e10; }
+
+/* 캐릭터 그리드 */
+.char-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px 24px; }
+.char-card { background:#0e0c07; border:1px solid #2a2008; border-radius:14px; overflow:hidden; cursor:pointer; position:relative; }
+.char-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#6b4e10,transparent); z-index:1; }
+.char-img { width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:54px; font-style:italic; position:relative; overflow:hidden; }
+.char-img::after { content:''; position:absolute; bottom:0; left:0; right:0; height:60%; background:linear-gradient(to top,#0a0804,transparent); }
+.char-badge { position:absolute; top:8px; left:8px; z-index:2; background:rgba(8,6,4,0.75); color:#6b5030; font-size:10px; padding:3px 8px; border-radius:20px; border:1px solid #2a2008; }
+.char-body { padding:10px 12px 12px; }
+.char-name { font-size:13px; font-weight:500; margin-bottom:3px; color:#f0e8d0; }
+.char-desc { font-size:11px; color:#6b5030; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.char-tags { margin-top:7px; font-size:10px; color:#8b6418; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+/* 대화 목록 */
+.page-hd { padding:52px 20px 14px; background:#080604; flex-shrink:0; }
+.page-hd-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-style:italic; color:#c9a04b; letter-spacing:0.05em; }
+.conv-item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid #1e1806; cursor:pointer; }
+.conv-av { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:20px; font-style:italic; flex-shrink:0; border:1.5px solid #3a2810; overflow:hidden; }
+.conv-info { flex:1; min-width:0; }
+.conv-name { font-size:14px; font-weight:500; margin-bottom:3px; color:#f0e8d0; }
+.conv-prev { font-size:12px; color:#6b5030; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-time { font-size:10px; color:#3a2810; flex-shrink:0; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+/* 제작 */
+.create-hd { padding:52px 20px 0; background:#080604; flex-shrink:0; }
+.create-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-style:italic; color:#c9a04b; letter-spacing:0.05em; margin-bottom:14px; }
+.create-tabs { display:flex; border-bottom:1px solid #2a2008; }
+.ctab { flex:1; text-align:center; padding:12px 0; font-size:14px; color:#4a3818; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .2s; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.ctab.on { color:#c9a04b; border-bottom-color:#c9a04b; }
+
+/* 플롯 목록 */
+.plot-item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid #1e1806; }
+.plot-av { width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:22px; font-style:italic; flex-shrink:0; border:1px solid #3a2810; overflow:hidden; }
+.plot-info { flex:1; }
+.plot-name { font-size:14px; font-weight:500; margin-bottom:3px; color:#f0e8d0; }
+.plot-stat { font-size:11px; color:#6b4e10; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.plot-btns { display:flex; gap:8px; }
+.plot-btn { width:34px; height:34px; background:#0e0c07; border:1px solid #2a2008; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; }
+
+/* 제작 폼 */
+.form-wrap { padding:16px 16px 40px; }
+.f-sec { margin-bottom:20px; }
+.f-label { display:block; font-size:11px; color:#8b6418; margin-bottom:8px; letter-spacing:0.08em; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.f-req { color:#c9a04b; }
+.f-input { width:100%; background:#0e0c07; border:1px solid #2e2210; border-radius:10px; padding:13px 16px; color:#f0e8d0; font-family:'Noto Sans KR',sans-serif; font-size:14px; outline:none; resize:none; transition:border-color .2s; -webkit-appearance:none; }
+.f-input:focus { border-color:#8b6418; }
+.f-input::placeholder { color:#2e2210; font-style:italic; font-family:'Cormorant Garamond',serif; }
+.f-cnt { text-align:right; font-size:10px; color:#3a2810; margin-top:4px; font-family:'Cormorant Garamond',serif; }
+.gender-row { display:flex; gap:8px; }
+.g-btn { flex:1; padding:12px; background:#0e0c07; border:1px solid #2e2210; border-radius:10px; color:#4a3818; font-size:13px; font-family:'Noto Sans KR',sans-serif; cursor:pointer; text-align:center; transition:all .2s; -webkit-appearance:none; }
+.g-btn.on { background:rgba(201,160,75,0.1); border-color:#8b6418; color:#c9a04b; }
+.tags-row { display:flex; flex-wrap:wrap; gap:6px; }
+.tag { padding:7px 13px; background:#0e0c07; border:1px solid #2e2210; border-radius:20px; font-size:12px; color:#4a3818; cursor:pointer; font-family:'Noto Sans KR',sans-serif; transition:all .2s; }
+.tag.on { background:rgba(201,160,75,0.1); border-color:#8b6418; color:#c9a04b; }
+
+/* 이미지 업로드 */
+.img-section { display:flex; align-items:flex-end; gap:14px; margin-bottom:4px; }
+.img-up { width:100px; height:100px; background:#0e0c07; border:1.5px dashed #3a2810; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; cursor:pointer; color:#4a3818; font-size:11px; font-family:'Cormorant Garamond',serif; font-style:italic; position:relative; overflow:hidden; transition:border-color .2s; }
+.img-up-icon { font-size:26px; color:#6b4e10; }
+.img-up-preview { position:absolute; inset:0; object-fit:cover; }
+.img-up-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; font-size:11px; color:#c9a04b; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.img-up:active .img-up-overlay { opacity:1; }
+.img-hints { font-size:11px; color:#4a3818; line-height:1.9; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.img-del-btn { display:none; margin-top:6px; background:transparent; border:1px solid #3a2810; color:#8a5050; font-size:11px; padding:4px 12px; border-radius:20px; cursor:pointer; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+/* 등록 버튼 */
+.reg-btn { width:100%; padding:15px; background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b); color:#060402; border:none; border-radius:12px; font-size:15px; font-family:'Cormorant Garamond',serif; font-weight:600; letter-spacing:0.1em; font-style:italic; cursor:pointer; box-shadow:0 4px 20px rgba(201,160,75,0.2); -webkit-appearance:none; }
+.reg-btn:active { opacity:.85; }
+
+/* 제작 도우미 버튼 */
+.wiz-btn { width:100%; padding:13px; background:transparent; border:1px solid #6b4e10; border-radius:12px; margin-bottom:20px; color:#c9a04b; font-size:13px; font-family:'Cormorant Garamond',serif; font-style:italic; letter-spacing:0.06em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; -webkit-appearance:none; }
+.wiz-btn:active { background:rgba(201,160,75,0.08); border-color:#c9a04b; }
+
+/* 마이페이지 */
+.prof-card { margin:0 16px 18px; background:#0e0c07; border:1px solid #2e2210; border-radius:16px; padding:20px; position:relative; overflow:hidden; }
+.prof-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent); }
+.prof-inner { display:flex; align-items:center; gap:16px; }
+.prof-av { width:58px; height:58px; border-radius:50%; background:#181408; border:2px solid #4a3408; display:flex; align-items:center; justify-content:center; font-size:26px; color:#6b5030; }
+.prof-name { font-size:16px; font-weight:500; margin-bottom:3px; color:#f0e8d0; }
+.prof-handle { font-size:12px; color:#6b4e10; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.prof-stats { display:flex; gap:14px; margin-top:10px; }
+.prof-stat span { font-size:14px; font-weight:500; color:#c9a04b; }
+.prof-stat small { font-size:11px; color:#6b5030; margin-left:3px; }
+.menu-sec { padding:0 16px; }
+.menu-sec-title { font-size:10px; color:#3a2810; letter-spacing:0.12em; padding:14px 0 7px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.menu-row { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid #1e1806; cursor:pointer; font-size:14px; color:#c8b88a; }
+.menu-ico { font-size:17px; width:22px; text-align:center; }
+.menu-arr { margin-left:auto; color:#3a2810; font-size:14px; }
+
+/* 채팅 헤더 */
+.ch-hd { display:flex; align-items:center; gap:12px; padding:50px 16px 13px; background:#080604; flex-shrink:0; position:relative; }
+.ch-hd::after { content:''; position:absolute; bottom:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#4a3408,#c9a04b,#4a3408,transparent); }
+.ch-back { font-size:28px; color:#8b6418; cursor:pointer; font-family:'Cormorant Garamond',serif; line-height:1; padding:2px 6px; }
+.ch-av { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:20px; font-style:italic; flex-shrink:0; border:1.5px solid #8b6418; overflow:hidden; }
+.ch-info { flex:1; }
+.ch-name { font-size:15px; font-weight:500; color:#f0e8d0; }
+.ch-sub { font-size:11px; color:#8b6418; margin-top:2px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.ch-more { color:#8b6418; font-size:20px; padding:4px 10px; cursor:pointer; letter-spacing:3px; }
+
+/* 채팅 드롭다운 */
+.ch-menu { display:none; position:absolute; top:112px; right:12px; z-index:30; background:#0e0c07; border:1px solid #4a3408; border-top:2px solid #c9a04b; border-radius:12px; min-width:180px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.9); }
+.ch-menu-item { padding:14px 18px; font-size:13px; cursor:pointer; border-bottom:1px solid #1e1806; display:flex; gap:10px; align-items:center; color:#c8b88a; }
+.ch-menu-item:last-child { border-bottom:none; }
+.ch-menu-item.del { color:#9a5050; }
+
+/* 채팅 인트로 */
+.ch-intro { text-align:center; padding:28px 20px 20px; }
+.ch-intro-orn { font-family:'Cormorant Garamond',serif; font-size:20px; color:#4a3408; letter-spacing:0.5em; margin-bottom:12px; }
+.ch-intro-name { font-family:'Cormorant Garamond',serif; font-size:36px; font-style:italic; color:#c9a04b; letter-spacing:0.08em; margin-bottom:4px; text-shadow:0 0 24px rgba(201,160,75,0.3); }
+.ch-intro-sub { font-size:12px; color:#8b6418; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.ch-intro-div { width:60px; height:1px; margin:12px auto; background:linear-gradient(90deg,transparent,#8b6418,transparent); }
+.ch-intro-desc { font-size:13px; color:#6b5030; line-height:1.9; font-style:italic; font-family:'Cormorant Garamond',serif; }
+
+/* 메시지 */
+.msgs { flex:1; overflow-y:auto; padding:18px 14px 10px; display:flex; flex-direction:column; gap:14px; -webkit-overflow-scrolling:touch; min-height:0; }
+.msgs::-webkit-scrollbar { width:1px; }
+.msgs::-webkit-scrollbar-thumb { background:#3a2810; }
+.msg-date { text-align:center; font-size:11px; color:#4a3408; font-style:italic; font-family:'Cormorant Garamond',serif; }
+.msg-row { display:flex; align-items:flex-end; gap:8px; animation:fu .2s ease; }
+.msg-row.u { flex-direction:row-reverse; }
+@keyframes fu { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-av { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:14px; font-style:italic; border:1px solid #8b6418; overflow:hidden; }
+.msg-ww { max-width:74%; display:flex; flex-direction:column; gap:3px; }
+.msg-row.u .msg-ww { align-items:flex-end; }
+.bbl { padding:11px 14px; font-size:14px; line-height:1.75; word-break:keep-all; }
+.bbl-ai { background:#0e0c07; border:1px solid #2e2210; border-left:2px solid #8b6418; border-radius:2px 12px 12px 12px; color:#f0e8d0; }
+.bbl-u { background:#131006; border:1px solid #2a2008; border-right:2px solid #4a3408; border-radius:12px 2px 12px 12px; color:#f0e8d0; }
+.bbl em { font-style:italic; color:#8b6418; font-family:'Cormorant Garamond',serif; font-size:13px; }
+.msg-t { font-size:10px; color:#3a2810; padding:0 3px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.typing-r { display:flex; align-items:flex-end; gap:8px; }
+.typing-b { background:#0e0c07; border:1px solid #2e2210; border-left:2px solid #8b6418; border-radius:2px 12px 12px 12px; padding:13px 16px; display:flex; gap:5px; align-items:center; }
+.td { width:5px; height:5px; border-radius:50%; background:#8b6418; animation:td 1.2s infinite; }
+.td:nth-child(2){animation-delay:.2s} .td:nth-child(3){animation-delay:.4s}
+@keyframes td { 0%,60%,100%{transform:translateY(0);opacity:.3} 30%{transform:translateY(-5px);opacity:1} }
+.quick-row { display:flex; gap:7px; flex-wrap:wrap; padding:6px 14px 8px; }
+.qbtn { background:transparent; border:1px solid #3a2810; color:#4a3818; padding:7px 14px; border-radius:20px; font-size:12px; font-family:'Cormorant Garamond',serif; font-style:italic; cursor:pointer; white-space:nowrap; -webkit-appearance:none; }
+.qbtn:active { border-color:#c9a04b; color:#c9a04b; }
+
+/* 입력창 */
+.ch-input-bar { background:#0c0a06; border-top:1px solid #2a2008; padding:10px 14px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); display:flex; gap:8px; align-items:flex-end; flex-shrink:0; }
+.ch-input-wrap { flex:1; background:#131006; border:1px solid #2e2210; border-radius:22px; padding:10px 16px; display:flex; align-items:center; transition:border-color .2s; }
+.ch-input-wrap:focus-within { border-color:#8b6418; }
+.ch-ta { flex:1; background:none; border:none; outline:none; color:#f0e8d0; font-family:'Noto Sans KR',sans-serif; font-size:14px; resize:none; max-height:90px; line-height:1.4; -webkit-appearance:none; }
+.ch-ta::placeholder { color:#3a2810; font-style:italic; font-family:'Cormorant Garamond',serif; }
+.ch-send { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 0 16px rgba(201,160,75,0.25); -webkit-appearance:none; }
+.ch-send:active { opacity:.8; }
+.ch-send svg { width:17px; height:17px; fill:#060402; }
+
+/* 팔레트 */
+.g1 { background:linear-gradient(160deg,#1e1500,#0e0a00); color:#d4a84b; }
+.g2 { background:linear-gradient(160deg,#1a1200,#0c0800); color:#c09030; }
+.g3 { background:linear-gradient(160deg,#221800,#120e00); color:#b87820; }
+.g4 { background:linear-gradient(160deg,#181000,#0a0600); color:#c8902a; }
+.g5 { background:linear-gradient(160deg,#201a00,#100e00); color:#d4b050; }
+
+/* 아바타 이미지 */
+.av-img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.av-img-sq { width:100%; height:100%; object-fit:cover; border-radius:11px; }
+
+/* 토스트 */
+.toast { position:fixed; bottom:72px; left:50%; transform:translateX(-50%) translateY(12px); background:#0e0c07; color:#c9a04b; padding:10px 22px; border-radius:20px; font-size:13px; white-space:nowrap; opacity:0; transition:all .25s; z-index:999; border:1px solid #4a3408; pointer-events:none; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* 저장 모달 */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:80; align-items:flex-end; }
+.modal-bg.on { display:flex; }
+.modal-box { background:#0e0c07; width:100%; max-height:70vh; display:flex; flex-direction:column; border-radius:20px 20px 0 0; overflow:hidden; }
+.modal-box::before { content:''; display:block; height:2px; flex-shrink:0; background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent); }
+.modal-hd { padding:16px 20px; border-bottom:1px solid #2a2008; display:flex; align-items:center; justify-content:space-between; }
+.modal-ttl { font-size:15px; color:#c9a04b; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.modal-x { color:#8b6418; font-size:24px; cursor:pointer; line-height:1; padding:0 4px; }
+.modal-body { overflow-y:auto; flex:1; }
+.save-row { padding:15px 20px; border-bottom:1px solid #1e1806; cursor:pointer; }
+.save-row-t { font-size:13px; font-weight:500; margin-bottom:3px; color:#f0e8d0; }
+.save-row-s { font-size:11px; color:#6b4e10; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+/* 제작 도우미 모달 */
+.wiz-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:80; align-items:flex-end; }
+.wiz-bg.on { display:flex; }
+.wiz-sheet { background:#080604; width:100%; height:88vh; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+.wiz-sheet::before { content:''; display:block; height:2px; flex-shrink:0; background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent); }
+.wiz-top { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 0; flex-shrink:0; }
+.wiz-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-style:italic; color:#c9a04b; }
+.wiz-x { width:32px; height:32px; border-radius:50%; background:#0e0c07; border:1px solid #2e2210; display:flex; align-items:center; justify-content:center; color:#8b6418; font-size:18px; cursor:pointer; }
+.wiz-cats { display:flex; padding:12px 16px 0; overflow-x:auto; flex-shrink:0; gap:0; }
+.wiz-cats::-webkit-scrollbar { display:none; }
+.wiz-cat { flex-shrink:0; padding:8px 16px; font-size:12px; color:#4a3818; cursor:pointer; border-bottom:2px solid transparent; font-family:'Cormorant Garamond',serif; font-style:italic; transition:all .2s; white-space:nowrap; }
+.wiz-cat.on { color:#c9a04b; border-bottom-color:#c9a04b; }
+.wiz-gline { height:1px; flex-shrink:0; background:linear-gradient(90deg,transparent,#3a2810,transparent); }
+.wiz-body { flex:1; overflow-y:auto; padding:14px 16px 16px; -webkit-overflow-scrolling:touch; }
+.wiz-body::-webkit-scrollbar { width:1px; }
+.wiz-body::-webkit-scrollbar-thumb { background:#3a2810; }
+.wiz-sec { margin-bottom:18px; }
+.wiz-sec-t { font-size:10px; color:#8b6418; margin-bottom:9px; letter-spacing:0.1em; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.wiz-opts { display:flex; flex-wrap:wrap; gap:6px; }
+.wiz-opt { padding:8px 14px; background:#0e0c07; border:1px solid #2e2210; border-radius:20px; font-size:13px; color:#6b5030; cursor:pointer; font-family:'Noto Sans KR',sans-serif; white-space:nowrap; -webkit-appearance:none; }
+.wiz-opt.on { background:rgba(201,160,75,0.1); border-color:#8b6418; color:#c9a04b; }
+.wiz-sel-wrap { padding:10px 16px; flex-shrink:0; border-top:1px solid #1e1806; background:#060504; }
+.wiz-sel-t { font-size:10px; color:#4a3818; margin-bottom:7px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.wiz-sel-row { display:flex; flex-wrap:wrap; gap:5px; min-height:26px; }
+.wiz-sel-tag { background:rgba(201,160,75,0.1); border:1px solid #6b4e10; color:#c9a04b; font-size:11px; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:4px; font-family:'Cormorant Garamond',serif; font-style:italic; }
+.wiz-sel-x { cursor:pointer; opacity:0.6; font-size:13px; line-height:1; }
+.wiz-apply { margin:10px 16px 14px; padding:14px; background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b); color:#060402; border:none; border-radius:12px; font-size:14px; font-family:'Cormorant Garamond',serif; font-weight:600; letter-spacing:0.08em; font-style:italic; cursor:pointer; flex-shrink:0; width:calc(100% - 32px); -webkit-appearance:none; }
+.wiz-apply:active { opacity:.85; }
+
+/* 빈 상태 */
+.empty { text-align:center; padding:70px 20px; color:#3a2810; font-size:13px; font-style:italic; font-family:'Cormorant Garamond',serif; line-height:2; }
+
+/* ══ 메시지 입력창 (완전 새로 제작) ══ */
+#chat-input-box {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #0a0804;
+  border-top: 1px solid #3a2810;
+  padding: 10px 14px 20px;
+  display: none;
+  gap: 10px;
+  align-items: flex-end;
+  z-index: 999;
+}
+#chat-input-box.show { display: flex; }
+#chat-input-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, #8b6418, #c9a04b, #8b6418, transparent);
+}
+#chat-input-text {
+  flex: 1;
+  background: #161008;
+  border: 1px solid #3a2810;
+  border-radius: 24px;
+  padding: 12px 18px;
+  color: #f0e8d0;
+  font-size: 15px;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+  resize: none;
+  line-height: 1.5;
+  max-height: 120px;
+  min-height: 46px;
+  -webkit-appearance: none;
+}
+#chat-input-text:focus {
+  border-color: #8b6418;
+  box-shadow: 0 0 0 2px rgba(139,100,24,0.15);
+}
+#chat-input-text::placeholder {
+  color: #3a2810;
+  font-style: italic;
+  font-family: 'Cormorant Garamond', serif;
+}
+#chat-send-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a3408, #8b6418, #c9a04b);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(201,160,75,0.3);
+  -webkit-appearance: none;
+}
+#chat-send-btn:active { opacity: 0.8; transform: scale(0.95); }
+#chat-send-btn svg { width: 18px; height: 18px; fill: #060402; }
+</style>
+</head>
+<body>
+
+<!-- 홈 -->
+<div class="page active has-tab" id="pg-home">
+  <div class="home-hd">
+    <div class="logo">Aether</div>
+    <div class="home-search">✦</div>
+  </div>
+  <div class="gline"></div>
+  <div class="scr">
+    <div class="banner">
+      <div class="banner-tag">✦ 추천</div>
+      <div class="banner-title">나만의 AI 캐릭터와<br>대화를 시작하세요</div>
+      <div class="banner-sub">직접 제작하거나 인기 캐릭터와 대화해보세요</div>
+    </div>
+    <div class="sec-hd">
+      <div class="sec-title">내 캐릭터</div>
+      <div class="sec-more" onclick="goTab('pg-create')">더보기 ›</div>
+    </div>
+    <div class="my-row" id="myRow"></div>
+    <div class="sec-hd" style="margin-top:4px">
+      <div class="sec-title">인기 캐릭터</div>
+    </div>
+    <div class="char-grid">
+      <div class="char-card" onclick="openChat('소냐','Countess of Ashenveil · 중세 귀족','S','g1','당신은 소냐입니다. 중세 유럽풍 판타지 귀족 영애. 차갑고 도도한 츤데레. 경어체 사용. 행동 묘사는 *이탤릭* 형식. 현대적 표현 금지. 200자 이내.','female','*싸늘한 눈빛으로 돌아보며*\n\n…이곳에 무단으로 들어온 것이냐. 내 앞에서 그 무례함부터 고치도록.','')">
+        <div class="char-badge">💬 598만</div>
+        <div class="char-img g1">S</div>
+        <div class="char-body">
+          <div class="char-name">소냐</div>
+          <div class="char-desc">차갑고 도도한 중세 귀족 영애. 그 냉담함 뒤엔 무언가 숨겨져 있다.</div>
+          <div class="char-tags">✦ 중세 판타지 · 츤데레</div>
+        </div>
+      </div>
+      <div class="char-card" onclick="openChat('유하은','따뜻한 현대 대학생','유','g3','당신은 유하은입니다. 따뜻하고 다정한 현대 대학생. 공감 능력이 높고 친근한 말투. 200자 이내.','female','안녕! 나 유하은이야 😊 오늘 어떻게 지냈어?','')">
+        <div class="char-badge">💬 97만</div>
+        <div class="char-img g3">유</div>
+        <div class="char-body">
+          <div class="char-name">유하은</div>
+          <div class="char-desc">따뜻하고 공감 능력 높은 현대 대학생. 언제나 네 편.</div>
+          <div class="char-tags">✦ 현대 · 다정</div>
+        </div>
+      </div>
+      <div class="char-card" onclick="openChat('이설','냉혹한 현대 비밀요원','이','g2','당신은 이설입니다. 냉혹하고 과묵한 현대 비밀요원. 짧고 단호한 말투. 행동 묘사 *이탤릭*. 200자 이내.','male','*등 뒤에서 나타나며*\n\n…미행당했다. 알고 있었나.','')">
+        <div class="char-badge">💬 215만</div>
+        <div class="char-img g2">이</div>
+        <div class="char-body">
+          <div class="char-name">이설</div>
+          <div class="char-desc">냉혹하고 과묵한 비밀요원. 항상 두 걸음 앞을 내다본다.</div>
+          <div class="char-tags">✦ 현대 · 미스터리</div>
+        </div>
+      </div>
+      <div class="char-card" onclick="openChat('레이디','우아한 리셋 마법사','레','g4','당신은 리셋팅 레이디입니다. 우아하고 신비로운 마법사. 여유롭고 장난스러운 말투. 행동 묘사 *이탤릭*. 200자 이내.','female','*손수건을 접으며 피식 웃으며*\n\n어머, 또 리셋이 필요한 상황인가요?','')">
+        <div class="char-badge">💬 158만</div>
+        <div class="char-img g4">레</div>
+        <div class="char-body">
+          <div class="char-name">리셋팅 레이디</div>
+          <div class="char-desc">모든 것을 리셋할 수 있는 우아한 마법사.</div>
+          <div class="char-tags">✦ 판타지 · 신비</div>
+        </div>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<!-- 대화 -->
+<div class="page has-tab" id="pg-chat">
+  <div class="page-hd"><div class="page-hd-title">대화</div></div>
+  <div class="gline"></div>
+  <div class="scr" id="convList"><div class="empty">아직 대화가 없어요.<br>캐릭터와 대화를 시작해보세요.</div></div>
+</div>
+
+<!-- 제작 -->
+<div class="page has-tab" id="pg-create">
+  <div class="create-hd">
+    <div class="create-title">제작</div>
+    <div class="create-tabs">
+      <div class="ctab on" id="ctab-list" onclick="switchCtab('list',this)">내 플롯</div>
+      <div class="ctab" id="ctab-make" onclick="switchCtab('make',this)">＋ 새로 만들기</div>
+    </div>
+  </div>
+  <div class="gline"></div>
+  <div class="scr" id="tab-list"><div id="plotList"></div></div>
+  <div class="scr" id="tab-make" style="display:none">
+    <div class="form-wrap">
+      <button class="wiz-btn" onclick="openWiz()">✦ 제작 도우미로 빠르게 만들기</button>
+      <div class="f-sec">
+        <label class="f-label">캐릭터 이미지</label>
+        <div class="img-section">
+          <div class="img-up" id="imgUpBtn" onclick="document.getElementById('imgFile').click()">
+            <div class="img-up-icon" id="imgIcon">＋</div>
+            <div id="imgTxt">이미지 추가</div>
+            <div class="img-up-overlay">📷 변경</div>
+          </div>
+          <div>
+            <div class="img-hints">· JPG, PNG 지원<br>· 정사각형 권장<br>· 카드에 표시됨</div>
+            <button class="img-del-btn" id="imgDelBtn" onclick="delImg()">✕ 삭제</button>
+          </div>
+        </div>
+        <input type="file" id="imgFile" accept="image/*" style="display:none" onchange="onImg(this)">
+      </div>
+      <div class="f-sec">
+        <label class="f-label"><span class="f-req">✦ </span>이름</label>
+        <input class="f-input" id="f-name" type="text" placeholder="예) 소냐" maxlength="10" oninput="document.getElementById('cnt-name').textContent=this.value.length+'/10'">
+        <div class="f-cnt" id="cnt-name">0/10</div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label"><span class="f-req">✦ </span>성별</label>
+        <div class="gender-row">
+          <div class="g-btn" onclick="pickG('female',this)">여성</div>
+          <div class="g-btn" onclick="pickG('male',this)">남성</div>
+          <div class="g-btn" onclick="pickG('neutral',this)">중성</div>
+        </div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label"><span class="f-req">✦ </span>캐릭터 설정</label>
+        <textarea class="f-input" id="f-prompt" rows="5" placeholder="성격, 말투, 세계관 등&#10;예) 차갑고 도도한 중세 귀족 영애..." maxlength="600" oninput="document.getElementById('cnt-prompt').textContent=this.value.length+'/600'"></textarea>
+        <div class="f-cnt" id="cnt-prompt">0/600</div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label">소개</label>
+        <textarea class="f-input" id="f-desc" rows="2" placeholder="홈 화면 소개 (선택)" maxlength="100" oninput="document.getElementById('cnt-desc').textContent=this.value.length+'/100'"></textarea>
+        <div class="f-cnt" id="cnt-desc">0/100</div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label">장르</label>
+        <div class="tags-row">
+          <div class="tag" onclick="this.classList.toggle('on')">판타지</div>
+          <div class="tag" onclick="this.classList.toggle('on')">현대</div>
+          <div class="tag" onclick="this.classList.toggle('on')">로맨스</div>
+          <div class="tag" onclick="this.classList.toggle('on')">스릴러</div>
+          <div class="tag" onclick="this.classList.toggle('on')">SF</div>
+          <div class="tag" onclick="this.classList.toggle('on')">중세</div>
+          <div class="tag" onclick="this.classList.toggle('on')">학원</div>
+          <div class="tag" onclick="this.classList.toggle('on')">무협</div>
+        </div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label">성격</label>
+        <div class="tags-row">
+          <div class="tag" onclick="this.classList.toggle('on')">츤데레</div>
+          <div class="tag" onclick="this.classList.toggle('on')">다정</div>
+          <div class="tag" onclick="this.classList.toggle('on')">차가움</div>
+          <div class="tag" onclick="this.classList.toggle('on')">쾌활</div>
+          <div class="tag" onclick="this.classList.toggle('on')">과묵</div>
+          <div class="tag" onclick="this.classList.toggle('on')">장난스러움</div>
+          <div class="tag" onclick="this.classList.toggle('on')">신비</div>
+          <div class="tag" onclick="this.classList.toggle('on')">도도</div>
+        </div>
+      </div>
+      <div class="f-sec">
+        <label class="f-label">첫 인사말</label>
+        <textarea class="f-input" id="f-greet" rows="3" placeholder="채팅 시작 시 첫 마디 (선택)&#10;예) *차갑게 돌아보며* ...누구냐." maxlength="200" oninput="document.getElementById('cnt-greet').textContent=this.value.length+'/200'"></textarea>
+        <div class="f-cnt" id="cnt-greet">0/200</div>
+      </div>
+      <button class="reg-btn" onclick="regChar()">✦ 캐릭터 등록하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 마이페이지 -->
+<div class="page has-tab" id="pg-my">
+  <div class="page-hd"><div class="page-hd-title">마이페이지</div></div>
+  <div class="gline"></div>
+  <div class="scr" style="padding-top:16px">
+    <div class="prof-card">
+      <div class="prof-inner">
+        <div class="prof-av">👤</div>
+        <div>
+          <div class="prof-name">셀레나</div>
+          <div class="prof-handle">@GrossCold6091</div>
+          <div class="prof-stats">
+            <div class="prof-stat"><span>4</span><small>팔로잉</small></div>
+            <div class="prof-stat"><span>10</span><small>팔로워</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="menu-sec">
+      <div class="menu-sec-title">계정</div>
+      <div class="menu-row"><span class="menu-ico">✏️</span>프로필 편집<span class="menu-arr">›</span></div>
+      <div class="menu-row"><span class="menu-ico">🔔</span>알림 설정<span class="menu-arr">›</span></div>
+    </div>
+    <div class="menu-sec">
+      <div class="menu-sec-title">기타</div>
+      <div class="menu-row"><span class="menu-ico">⚙️</span>설정<span class="menu-arr">›</span></div>
+      <div class="menu-row"><span class="menu-ico">❓</span>고객센터<span class="menu-arr">›</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 채팅 -->
+<div class="page" id="pg-msg" style="display:flex;flex-direction:column;height:100vh;">
+  <div class="ch-hd" style="flex-shrink:0;">
+    <div class="ch-back" onclick="closeChat()">‹</div>
+    <div class="ch-av g1" id="ch-av"></div>
+    <div class="ch-info">
+      <div class="ch-name" id="ch-name"></div>
+      <div class="ch-sub" id="ch-sub"></div>
+    </div>
+    <div class="ch-more" onclick="toggleMenu()">···</div>
+  </div>
+  <div class="ch-menu" id="ch-menu">
+    <div class="ch-menu-item" onclick="saveChat()">💾 대화 저장</div>
+    <div class="ch-menu-item" onclick="loadChats()">📂 저장된 대화</div>
+    <div class="ch-menu-item del" onclick="clearChat()">🗑 대화 초기화</div>
+  </div>
+  <div class="msgs" id="msgs" style="flex:1;overflow-y:auto;min-height:0;">
+    <div class="msg-date">오늘</div>
+    <div class="typing-r" id="typing" style="display:none">
+      <div class="msg-av g1" id="typing-av"></div>
+      <div class="typing-b"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+    </div>
+  </div>
+  <div class="quick-row" id="qrow" style="flex-shrink:0;"></div>
+</div>
+
+<!-- 메시지 입력창 (독립 고정) -->
+<div id="chat-input-box">
+  <textarea id="chat-input-text" rows="1" placeholder="메시지를 입력하세요…"
+    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+  <button id="chat-send-btn" onclick="send()">
+    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+  </button>
+</div>
+
+<!-- 탭바 -->
+<div class="tabbar">
+  <button class="tab-item on" id="ti-home" onclick="goTab('pg-home')"><div class="ti">⌂</div><div>홈</div></button>
+  <button class="tab-item" id="ti-chat" onclick="goTab('pg-chat')"><div class="ti">💬</div><div>대화</div></button>
+  <button class="tab-item" id="ti-create" onclick="goTab('pg-create')"><div class="ti">✦</div><div>제작</div></button>
+  <button class="tab-item" id="ti-my" onclick="goTab('pg-my')"><div class="ti">◎</div><div>마이페이지</div></button>
+</div>
+
+<!-- 저장 모달 -->
+<div class="modal-bg" id="saveModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <div class="modal-ttl" id="saveModalTitle">저장된 대화</div>
+      <div class="modal-x" onclick="document.getElementById('saveModal').classList.remove('on')">×</div>
+    </div>
+    <div class="modal-body" id="saveModalBody"></div>
+  </div>
+</div>
+
+<!-- 제작 도우미 모달 -->
+<div class="wiz-bg" id="wizBg">
+  <div class="wiz-sheet">
+    <div class="wiz-top">
+      <div class="wiz-title">✦ 제작 도우미</div>
+      <div class="wiz-x" onclick="closeWiz()">×</div>
+    </div>
+    <div class="wiz-cats" id="wizCats"></div>
+    <div class="wiz-gline"></div>
+    <div class="wiz-body" id="wizBody"></div>
+    <div class="wiz-sel-wrap">
+      <div class="wiz-sel-t">선택된 항목 (누르면 제거)</div>
+      <div class="wiz-sel-row" id="wizSelRow"></div>
+    </div>
+    <button class="wiz-apply" onclick="applyWiz()">✦ 캐릭터 설정에 적용하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// 상태
+let curPage='pg-home';
+let myChars=JSON.parse(localStorage.getItem('myChars')||'[]');
+let convHistory=JSON.parse(localStorage.getItem('convHistory')||'[]');
+let selG='';
+let curChar=null;
+let chatMsgs=[];
+let busy=false;
+let curImg=null;
+const pals=['g1','g2','g3','g4','g5'];
+
+// 탭 이동
+function goTab(id){
+  if(id===curPage)return;
+  const prev=document.getElementById(curPage);
+  const next=document.getElementById(id);
+  prev.classList.remove('active'); prev.classList.add('out');
+  setTimeout(()=>prev.classList.remove('out'),220);
+  next.classList.add('active');
+  curPage=id;
+  document.querySelectorAll('.tab-item').forEach(b=>b.classList.remove('on'));
+  const m={'pg-home':'ti-home','pg-chat':'ti-chat','pg-create':'ti-create','pg-my':'ti-my'};
+  if(m[id])document.getElementById(m[id]).classList.add('on');
+  if(id==='pg-home')renderMyRow();
+  if(id==='pg-create')renderPlotList();
+  if(id==='pg-chat')renderConvList();
+}
+
+// 채팅 열기
+function openChat(name,sub,init,pal,sys,gender,greet,img){
+  img=img||'';
+  curChar={name,sub,init,pal,sys,gender,greet,img};
+  chatMsgs=[];
+  const av=document.getElementById('ch-av');
+  av.className='ch-av '+pal;
+  av.innerHTML=img?`<img class="av-img" src="${img}">`  :init;
+  document.getElementById('ch-name').textContent=name;
+  document.getElementById('ch-sub').textContent=sub;
+  const tav=document.getElementById('typing-av');
+  tav.className='msg-av '+pal;
+  tav.innerHTML=img?`<img class="av-img" src="${img}">`:init;
+  const m=document.getElementById('msgs');
+  m.innerHTML=`<div class="msg-date">오늘</div>
+<div class="typing-r" id="typing" style="display:none">
+  <div class="msg-av ${pal}" id="typing-av">${img?`<img class="av-img" src="${img}">`:init}</div>
+  <div class="typing-b"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+</div>`;
+  const intro=document.createElement('div');
+  intro.className='ch-intro';
+  intro.innerHTML=`<div class="ch-intro-orn">✦ ✦ ✦</div><div class="ch-intro-name">${name}</div><div class="ch-intro-sub">${sub}</div><div class="ch-intro-div"></div><div class="ch-intro-desc">${sys.slice(0,60).replace(/\n/g,' ')}…</div>`;
+  m.insertBefore(intro,m.firstChild);
+  document.getElementById('qrow').innerHTML=`
+    <button class="qbtn" onclick="quickSend('안녕하세요.')">안녕하세요</button>
+    <button class="qbtn" onclick="quickSend('당신은 누구입니까?')">당신은 누구?</button>
+    <button class="qbtn" onclick="quickSend('저를 아시나요?')">저를 아시나요?</button>`;
+  document.getElementById('chat-input-box').classList.add('show');
+  document.getElementById('chat-input-text').value='';
+  setTimeout(()=>{if(greet){addMsg('ai',greet);chatMsgs.push({role:'assistant',content:greet});}},600);
+  const prev=document.getElementById(curPage);
+  prev.classList.remove('active'); prev.classList.add('out');
+  setTimeout(()=>prev.classList.remove('out'),220);
+  document.getElementById('pg-msg').classList.add('active');
+  curPage='pg-msg';
+  document.getElementById('ch-menu').style.display='none';
+  const ei=convHistory.findIndex(c=>c.name===name);
+  const entry={name,sub,init,pal,sys,gender,greet,img,preview:greet||'대화를 시작하세요.',time:'방금'};
+  if(ei>=0)convHistory[ei]=entry; else convHistory.unshift(entry);
+  localStorage.setItem('convHistory',JSON.stringify(convHistory));
+}
+
+function closeChat(){
+  document.getElementById('pg-msg').classList.remove('active');
+  document.getElementById('pg-home').classList.add('active');
+  document.getElementById('chat-input-box').classList.remove('show');
+  curPage='pg-home';
+  document.querySelectorAll('.tab-item').forEach(b=>b.classList.remove('on'));
+  document.getElementById('ti-home').classList.add('on');
+  document.getElementById('ch-menu').style.display='none';
+}
+
+// 메시지
+function addMsg(role,text){
+  const m=document.getElementById('msgs');
+  const tr=document.getElementById('typing');
+  const row=document.createElement('div');
+  row.className='msg-row '+(role==='user'?'u':'');
+  const t=new Date().toTimeString().slice(0,5);
+  const fmt=text.replace(/\*(.*?)\*/g,'<em>*$1*</em>').replace(/\n/g,'<br>');
+  const avHtml=curChar.img?`<img class="av-img" src="${curChar.img}">`:curChar.init;
+  if(role==='ai'){
+    row.innerHTML=`<div class="msg-av ${curChar.pal}">${avHtml}</div><div class="msg-ww"><div class="bbl bbl-ai">${fmt}</div><div class="msg-t">${t}</div></div>`;
+  }else{
+    row.innerHTML=`<div class="msg-ww"><div class="bbl bbl-u">${fmt}</div><div class="msg-t">${t}</div></div>`;
+  }
+  m.insertBefore(row,tr);
+  m.scrollTop=m.scrollHeight;
+}
+
+function setTyping(on){
+  const t=document.getElementById('typing');
+  if(t){t.style.display=on?'flex':'none';if(on)document.getElementById('msgs').scrollTop=9999;}
+}
+
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+function rsz(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function quickSend(t){
+  const ta=document.getElementById('chat-input-text');
+  if(ta){ta.value=t;}
+  send();
+}
+
+async function send(){
+  if(busy)return;
+  const ta=document.getElementById('chat-input-text');
+  const text=ta?ta.value.trim():'';if(!text)return;
+  if(ta){ta.value='';ta.style.height='auto';}
+  document.getElementById('qrow').innerHTML='';
+  addMsg('user',text);chatMsgs.push({role:'user',content:text});
+  busy=true;setTyping(true);
+  try{
+    const GEMINI_KEY='AIzaSyAwrgxpvoN-gwIzGcmAIRf0XP9rpM00Res';
+    // 메시지 형식 변환
+    const geminiMsgs = chatMsgs.slice(0,-1).map(m=>({
+      role: m.role==='assistant'?'model':'user',
+      parts:[{text:m.content}]
+    }));
+    const lastMsg = chatMsgs[chatMsgs.length-1];
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system_instruction:{parts:[{text:curChar.sys}]},
+        contents:[...geminiMsgs,{role:'user',parts:[{text:lastMsg.content}]}],
+        generationConfig:{maxOutputTokens:1000,temperature:0.9}
+      })
+    });
+    const d=await res.json();
+    const reply=d.candidates?.[0]?.content?.parts?.[0]?.text||'…';
+    chatMsgs.push({role:'assistant',content:reply});
+    setTyping(false);addMsg('ai',reply);
+    const ei=convHistory.findIndex(c=>c.name===curChar.name);
+    if(ei>=0){convHistory[ei].preview=reply.slice(0,40);convHistory[ei].time='방금';}
+    localStorage.setItem('convHistory',JSON.stringify(convHistory));
+  }catch(e){setTyping(false);console.error(e);addMsg('ai','[오류] '+e.message+' — 인터넷 연결 또는 API 키를 확인해주세요.');}
+  busy=false;
+}
+
+// 채팅 메뉴
+function toggleMenu(){
+  const m=document.getElementById('ch-menu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('ch-menu');
+  if(menu&&menu.style.display==='block'){
+    if(!menu.contains(e.target)&&!e.target.classList.contains('ch-more')&&e.target.textContent!=='···'){
+      menu.style.display='none';
+    }
+  }
+});
+
+// 저장
+function saveChat(){
+  document.getElementById('ch-menu').style.display='none';
+  if(!curChar||chatMsgs.length===0){toast('저장할 대화가 없어요.');return;}
+  const s=JSON.parse(localStorage.getItem('savedChats')||'{}');
+  const k=curChar.name;if(!s[k])s[k]=[];
+  s[k].push({at:new Date().toLocaleString('ko-KR'),msgs:[...chatMsgs],char:{...curChar}});
+  if(s[k].length>5)s[k]=s[k].slice(-5);
+  localStorage.setItem('savedChats',JSON.stringify(s));
+  toast('💾 대화가 저장됐어요!');
+}
+
+function loadChats(){
+  document.getElementById('ch-menu').style.display='none';
+  const s=JSON.parse(localStorage.getItem('savedChats')||'{}');
+  const list=s[curChar?.name]||[];
+  if(!list.length){toast('저장된 대화가 없어요.');return;}
+  document.getElementById('saveModalTitle').textContent='✦ 저장된 대화 — '+(curChar?.name||'');
+  document.getElementById('saveModalBody').innerHTML=list.map((sv,i)=>`
+    <div class="save-row" onclick="restoreChat(${i})">
+      <div class="save-row-t">저장 ${i+1} · ${sv.at}</div>
+      <div class="save-row-s">메시지 ${sv.msgs.length}개</div>
+    </div>`).join('');
+  window._sl=list;
+  document.getElementById('saveModal').classList.add('on');
+}
+
+function restoreChat(i){
+  document.getElementById('saveModal').classList.remove('on');
+  const sv=window._sl?.[i];if(!sv)return;
+  chatMsgs=[...sv.msgs];
+  const m=document.getElementById('msgs');
+  const avHtml=curChar.img?`<img class="av-img" src="${curChar.img}">`:curChar.init;
+  m.innerHTML=`<div class="msg-date" style="color:#8b6418">✦ 저장된 대화</div>
+<div class="typing-r" id="typing" style="display:none">
+  <div class="msg-av ${curChar.pal}" id="typing-av">${avHtml}</div>
+  <div class="typing-b"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+</div>`;
+  chatMsgs.forEach(msg=>{
+    const row=document.createElement('div');
+    row.className='msg-row '+(msg.role==='user'?'u':'');
+    const fmt=msg.content.replace(/\*(.*?)\*/g,'<em>*$1*</em>').replace(/\n/g,'<br>');
+    if(msg.role==='assistant'){
+      row.innerHTML=`<div class="msg-av ${curChar.pal}">${avHtml}</div><div class="msg-ww"><div class="bbl bbl-ai">${fmt}</div></div>`;
+    }else{
+      row.innerHTML=`<div class="msg-ww"><div class="bbl bbl-u">${fmt}</div></div>`;
+    }
+    m.insertBefore(row,document.getElementById('typing'));
+  });
+  m.scrollTop=m.scrollHeight;
+  toast('📂 대화를 불러왔어요!');
+}
+
+function clearChat(){
+  document.getElementById('ch-menu').style.display='none';
+  chatMsgs=[];
+  const avHtml=curChar?.img?`<img class="av-img" src="${curChar.img}">`:curChar?.init||'';
+  document.getElementById('msgs').innerHTML=`<div class="msg-date">오늘</div>
+<div class="typing-r" id="typing" style="display:none">
+  <div class="msg-av ${curChar?.pal||'g1'}" id="typing-av">${avHtml}</div>
+  <div class="typing-b"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+</div>`;
+  if(curChar?.greet){setTimeout(()=>{addMsg('ai',curChar.greet);chatMsgs.push({role:'assistant',content:curChar.greet});},400);}
+  toast('대화가 초기화됐어요.');
+}
+
+// 이미지
+function onImg(input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){toast('5MB 이하만 가능해요.');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    curImg=e.target.result;
+    const btn=document.getElementById('imgUpBtn');
+    const old=btn.querySelector('.img-up-preview');if(old)old.remove();
+    const img=document.createElement('img');
+    img.className='img-up-preview';img.src=curImg;
+    btn.insertBefore(img,btn.firstChild);
+    document.getElementById('imgIcon').style.display='none';
+    document.getElementById('imgTxt').style.display='none';
+    document.getElementById('imgDelBtn').style.display='inline-block';
+    btn.style.borderColor='#8b6418';
+    toast('✦ 이미지가 추가됐어요!');
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function delImg(){
+  curImg=null;
+  const btn=document.getElementById('imgUpBtn');
+  const p=btn.querySelector('.img-up-preview');if(p)p.remove();
+  document.getElementById('imgIcon').style.display='';
+  document.getElementById('imgTxt').style.display='';
+  document.getElementById('imgDelBtn').style.display='none';
+  btn.style.borderColor='';
+  toast('이미지가 삭제됐어요.');
+}
+
+// 제작
+function switchCtab(tab,el){
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  document.getElementById('tab-list').style.display=tab==='list'?'block':'none';
+  document.getElementById('tab-make').style.display=tab==='make'?'block':'none';
+  if(tab==='list')renderPlotList();
+}
+function pickG(g,el){selG=g;document.querySelectorAll('.g-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+
+function regChar(){
+  const name=document.getElementById('f-name').value.trim();
+  const prompt=document.getElementById('f-prompt').value.trim();
+  if(!name){toast('이름을 입력해주세요.');return;}
+  if(!selG){toast('성별을 선택해주세요.');return;}
+  if(!prompt){toast('캐릭터 설정을 입력해주세요.');return;}
+  const desc=document.getElementById('f-desc').value.trim()||name+' 캐릭터';
+  const greet=document.getElementById('f-greet').value.trim();
+  myChars.push({name,sub:desc,init:name[0],pal:pals[myChars.length%pals.length],sys:prompt,gender:selG,greet,img:curImg||'',msgs:0});
+  localStorage.setItem('myChars',JSON.stringify(myChars));
+  ['f-name','f-prompt','f-desc','f-greet'].forEach(id=>document.getElementById(id).value='');
+  ['cnt-name','cnt-prompt','cnt-desc','cnt-greet'].forEach((id,i)=>document.getElementById(id).textContent=['0/10','0/600','0/100','0/200'][i]);
+  document.querySelectorAll('.g-btn,.tag').forEach(b=>b.classList.remove('on'));
+  selG='';curImg=null;
+  const btn=document.getElementById('imgUpBtn');
+  const p=btn.querySelector('.img-up-preview');if(p)p.remove();
+  document.getElementById('imgIcon').style.display='';
+  document.getElementById('imgTxt').style.display='';
+  document.getElementById('imgDelBtn').style.display='none';
+  btn.style.borderColor='';
+  toast('✦ 캐릭터가 등록됐어요!');
+  switchCtab('list',document.getElementById('ctab-list'));
+}
+
+function renderPlotList(){
+  const el=document.getElementById('plotList');
+  if(!myChars.length){el.innerHTML='<div class="empty">아직 제작한 캐릭터가 없어요.<br>새로 만들기를 눌러보세요.</div>';return;}
+  el.innerHTML=myChars.map((c,i)=>`
+    <div class="plot-item">
+      <div class="plot-av ${c.pal}">${c.img?`<img class="av-img-sq" src="${c.img}">`:c.init}</div>
+      <div class="plot-info"><div class="plot-name">${c.name}</div><div class="plot-stat">대화량 ${c.msgs||0} · ${c.gender==='female'?'여성':c.gender==='male'?'남성':'중성'}</div></div>
+      <div class="plot-btns">
+        <div class="plot-btn" onclick='openChat(${JSON.stringify(c.name)},${JSON.stringify(c.sub)},${JSON.stringify(c.init)},${JSON.stringify(c.pal)},${JSON.stringify(c.sys)},${JSON.stringify(c.gender)},${JSON.stringify(c.greet)},${JSON.stringify(c.img||"")})'>💬</div>
+        <div class="plot-btn" onclick="delChar(${i})">🗑</div>
+      </div>
+    </div>`).join('');
+}
+function delChar(i){myChars.splice(i,1);localStorage.setItem('myChars',JSON.stringify(myChars));renderPlotList();toast('삭제됐어요.');}
+
+function renderMyRow(){
+  const el=document.getElementById('myRow');
+  const add=`<div class="add-card" onclick="goTab('pg-create')"><div class="add-card-icon">＋</div><div>새로 만들기</div></div>`;
+  if(!myChars.length){el.innerHTML=add;return;}
+  el.innerHTML=myChars.map(c=>`
+    <div class="my-card" onclick='openChat(${JSON.stringify(c.name)},${JSON.stringify(c.sub)},${JSON.stringify(c.init)},${JSON.stringify(c.pal)},${JSON.stringify(c.sys)},${JSON.stringify(c.gender)},${JSON.stringify(c.greet)},${JSON.stringify(c.img||"")})'>
+      <div class="my-card-img ${c.pal}">${c.img?`<img class="av-img" src="${c.img}">`:c.init}</div>
+      <div class="my-card-name">${c.name}</div>
+      <div class="my-card-sub">대화 ${c.msgs||0}회</div>
+    </div>`).join('')+add;
+}
+
+function renderConvList(){
+  const el=document.getElementById('convList');
+  if(!convHistory.length){el.innerHTML='<div class="empty">아직 대화가 없어요.<br>캐릭터와 대화를 시작해보세요.</div>';return;}
+  el.innerHTML=convHistory.map(c=>`
+    <div class="conv-item" onclick='openChat(${JSON.stringify(c.name)},${JSON.stringify(c.sub)},${JSON.stringify(c.init)},${JSON.stringify(c.pal)},${JSON.stringify(c.sys)},${JSON.stringify(c.gender)},${JSON.stringify(c.greet||"")},${JSON.stringify(c.img||"")})'>
+      <div class="conv-av ${c.pal}">${c.img?`<img class="av-img" src="${c.img}">`:c.init}</div>
+      <div class="conv-info"><div class="conv-name">${c.name}</div><div class="conv-prev">${c.preview||''}</div></div>
+      <div class="conv-time">${c.time||''}</div>
+    </div>`).join('');
+}
+
+// 제작 도우미
+const wizData={
+  '외모':{
+    '헤어스타일':['긴 생머리','짧은 단발','웨이브 헤어','포니테일','트윈테일','헝클어진 머리','반묶음','백발','금발','흑발','은발','붉은 머리','그라데이션 헤어'],
+    '눈':['붉은 눈','금색 눈','은색 눈','검은 눈','하늘색 눈','이색동공','죽은 듯한 눈','날카로운 눈매','처진 눈','빛나는 눈'],
+    '체형':['날씬한 체형','근육질 체형','작고 귀여운 체형','키가 매우 큰','키가 작은','호리호리한'],
+    '종족':['인간','엘프','반엘프','드래곤족','악마족','천사족','뱀파이어','늑대인간','고양이족','토끼족','귀신','신','반신'],
+  },
+  '성격':{
+    '밝은 계열':['밝고 활발함','쾌활하고 장난스러움','천진난만함','순수함','긍정적임','애교 많음','수다스러움'],
+    '어두운 계열':['우울함','허무주의','냉소적임','쓸쓸함','자기혐오','비관적임','염세주의'],
+    '강한 계열':['차갑고 냉담함','도도하고 자존심 강함','오만함','잔인함','폭력적임','독선적임','지배욕 강함'],
+    '예민한 계열':['예민하고 날카로움','감정 기복 심함','쉽게 화냄','질투심 많음','집착함','의심이 많음','피해의식'],
+    '특수 계열':['츤데레','얀데레','쿨데레','천연','소극적','겁쟁이','완벽주의','책임감 강함','의리 있음','비밀 많음'],
+  },
+  '말투':{
+    '경어/격식':['정중한 경어체','고어체(~이더냐)','왕족 말투','귀족 말투','선생님 말투'],
+    '반말':['친근한 반말','짧고 단호한 반말','무뚝뚝한 반말','거친 말투'],
+    '특이한 말투':['말이 없고 과묵','혼잣말 많음','수수께끼 같은 말','항상 3인칭','노래하듯 말함','자주 머뭇거림'],
+  },
+  '세계관':{
+    '시대':['중세 판타지','현대','근미래 SF','19세기 유럽','포스트 아포칼립스','마법 학교','지하 세계'],
+    '직업/신분':['귀족 영애','왕족','기사','마법사','암살자','탐정','과학자','용사','마왕','신관','상인'],
+  },
+  '능력':{
+    '전투':['검술 달인','마법 사용자','총기 전문가','격투가','독 사용','저격수','불사신'],
+    '특수':['독심술','예지능력','시간 조종','투명화','치유 능력','변신 능력','염동력'],
+    '지식':['천재','전략가','의사','해커','언어 마스터','예술가','발명가'],
+  },
+};
+let wizSel={};
+let wizCat='외모';
+
+function openWiz(){document.getElementById('wizBg').classList.add('on');wizSel={};wizCat='외모';renderWizCats();renderWizBody();renderWizSel();}
+function closeWiz(){document.getElementById('wizBg').classList.remove('on');}
+document.getElementById('wizBg').addEventListener('click',e=>{if(e.target===document.getElementById('wizBg'))closeWiz();});
+
+function renderWizCats(){
+  document.getElementById('wizCats').innerHTML=Object.keys(wizData).map(c=>`<div class="wiz-cat ${c===wizCat?'on':''}" onclick="wizCat='${c}';renderWizCats();renderWizBody()">${c}</div>`).join('');
+}
+function renderWizBody(){
+  document.getElementById('wizBody').innerHTML=Object.entries(wizData[wizCat]).map(([sec,opts])=>`
+    <div class="wiz-sec">
+      <div class="wiz-sec-t">${sec}</div>
+      <div class="wiz-opts">${opts.map(o=>`<div class="wiz-opt ${wizSel[o]?'on':''}" onclick="toggleWizOpt('${o}','${sec}')">${o}</div>`).join('')}</div>
+    </div>`).join('');
+}
+function toggleWizOpt(o,sec){if(wizSel[o])delete wizSel[o];else wizSel[o]=sec;renderWizBody();renderWizSel();}
+function renderWizSel(){
+  const row=document.getElementById('wizSelRow');
+  const keys=Object.keys(wizSel);
+  if(!keys.length){row.innerHTML='<span style="color:#3a2810;font-size:12px;font-family:\'Cormorant Garamond\',serif;font-style:italic;">아직 선택된 항목이 없어요</span>';return;}
+  row.innerHTML=keys.map(o=>`<span class="wiz-sel-tag">${o}<span class="wiz-sel-x" onclick="delWizSel('${o}')">×</span></span>`).join('');
+}
+function delWizSel(o){delete wizSel[o];renderWizBody();renderWizSel();}
+function applyWiz(){
+  const keys=Object.keys(wizSel);
+  if(!keys.length){toast('항목을 선택해주세요.');return;}
+  const byG={};
+  Object.entries(wizSel).forEach(([o,sec])=>{if(!byG[sec])byG[sec]=[];byG[sec].push(o);});
+  const lines=[];
+  const appearSecs=['헤어스타일','눈','체형','종족'];
+  const ap=appearSecs.flatMap(s=>byG[s]||[]);
+  if(ap.length)lines.push('외모: '+ap.join(', ')+'.');
+  const perseSecs=['밝은 계열','어두운 계열','강한 계열','예민한 계열','특수 계열'];
+  const pp=perseSecs.flatMap(s=>byG[s]||[]);
+  if(pp.length)lines.push('성격: '+pp.join(', ')+'.');
+  const sp=[...(byG['경어/격식']||[]),...(byG['반말']||[]),...(byG['특이한 말투']||[])];
+  if(sp.length)lines.push('말투: '+sp.join(', ')+'.');
+  const wp=[...(byG['시대']||[]),...(byG['직업/신분']||[])];
+  if(wp.length)lines.push('배경: '+wp.join(', ')+'.');
+  const abp=[...(byG['전투']||[]),...(byG['특수']||[]),...(byG['지식']||[])];
+  if(abp.length)lines.push('능력: '+abp.join(', ')+'.');
+  const result=lines.join('\n');
+  const ta=document.getElementById('f-prompt');
+  ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+result;
+  document.getElementById('cnt-prompt').textContent=ta.value.length+'/600';
+  closeWiz();
+  toast('✦ 설정이 적용됐어요!');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2200);
+}
+
+renderMyRow();
+</script>
+</body>
+</html>

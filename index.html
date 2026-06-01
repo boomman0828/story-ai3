@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aether</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;background:#070604;color:#f0e8d0;font-family:'Noto Sans KR',sans-serif}
+
+/* ── 화면 전체를 4개 레이어로 분리 ── */
+/* 레이어1: 일반 페이지들 */
+.pg{position:fixed;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(18px);transition:opacity .2s,transform .2s;z-index:1}
+.pg.on{opacity:1;pointer-events:auto;transform:translateX(0)}
+.pg.out{transform:translateX(-18px)}
+
+/* 레이어2: 탭바 */
+#bar{position:fixed;bottom:0;left:0;right:0;height:56px;background:#050403;z-index:10;display:flex}
+#bar::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+.tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;color:#2e2008;font-size:10px;font-family:'Cormorant Garamond',serif;font-style:italic;cursor:pointer;transition:color .2s}
+.tb.on{color:#c9a04b}
+.ti{font-size:18px;line-height:1}
+
+/* 레이어3: 채팅 화면 (완전 독립) */
+#chatScreen{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  display:none;
+  flex-direction:column;
+  background:#070604;
+  z-index:20;
+}
+#chatScreen.show{display:flex}
+
+/* 레이어4: 입력창 (채팅 화면 안에서 맨 아래 고정) */
+#chatHeader{flex-shrink:0;position:relative}
+#chatHeader::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#4a3408,#c9a04b,#4a3408,transparent)}
+#chatMsgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 13px}
+#chatMsgs::-webkit-scrollbar{width:1px}
+#chatMsgs::-webkit-scrollbar-thumb{background:#3a2810}
+#chatQuick{flex-shrink:0;display:flex;gap:6px;flex-wrap:wrap;padding:5px 13px 7px}
+#chatInput{
+  flex-shrink:0;
+  background:#0a0806;
+  border-top:1px solid #2a2008;
+  padding:10px 13px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+}
+
+/* 스크롤 */
+.scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:56px}
+.scr::-webkit-scrollbar{width:1px}
+.scr::-webkit-scrollbar-thumb{background:#3a2810}
+
+/* 골드선 */
+.gl{height:1px;flex-shrink:0;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+
+/* 공통 헤더 */
+.ph{padding:50px 18px 14px;background:#070604;flex-shrink:0}
+.pt{font-family:'Cormorant Garamond',serif;font-size:26px;font-style:italic;color:#c9a04b;letter-spacing:.05em}
+
+/* 홈 */
+.hh{display:flex;align-items:flex-end;justify-content:space-between;padding:50px 18px 14px;background:#070604;flex-shrink:0}
+.logo{font-family:'Cormorant Garamond',serif;font-size:32px;font-style:italic;color:#c9a04b;text-shadow:0 0 20px rgba(201,160,75,.4)}
+.bn{margin:12px 16px 20px;background:linear-gradient(160deg,#100d04,#070500);border:1px solid #2e2210;border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.bn::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+.bn::after{content:'✦';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:50px;color:#2a1c08;font-family:'Cormorant Garamond',serif;line-height:1}
+.btag{display:inline-block;background:rgba(201,160,75,.1);color:#c9a04b;font-size:10px;padding:3px 11px;border-radius:20px;margin-bottom:9px;letter-spacing:.1em;border:1px solid rgba(201,160,75,.2);font-family:'Cormorant Garamond',serif;font-style:italic}
+.btit{font-size:17px;font-weight:500;line-height:1.55;margin-bottom:5px}
+.bsub{font-size:12px;color:#6b5030}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:11px}
+.st{font-family:'Cormorant Garamond',serif;font-size:15px;font-style:italic;color:#c9a04b;letter-spacing:.06em}
+.sm{font-size:12px;color:#6b4e10;cursor:pointer}
+.mr{display:flex;gap:9px;padding:0 16px 20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mr::-webkit-scrollbar{display:none}
+.mc{flex-shrink:0;width:100px;background:#0d0b07;border:1px solid #2a2008;border-radius:12px;overflow:hidden;cursor:pointer;position:relative}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6b4e10,transparent);z-index:1}
+.mci{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:28px;font-style:italic;overflow:hidden}
+.mcn{font-size:11px;padding:5px 9px 3px;color:#f0e8d0}
+.mcs{font-size:10px;padding:0 9px 7px;color:#4a3418;font-family:'Cormorant Garamond',serif;font-style:italic}
+.ac{flex-shrink:0;width:100px;height:100px;background:#0d0b07;border:1.5px dashed #2e2210;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#3a2810;font-size:11px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 20px}
+.cc{background:#0d0b07;border:1px solid #2a2008;border-radius:13px;overflow:hidden;cursor:pointer;position:relative}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#6b4e10,transparent);z-index:1}
+.ci{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:52px;font-style:italic;position:relative;overflow:hidden}
+.ci::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,#090705,transparent)}
+.cb{position:absolute;top:7px;left:7px;z-index:2;background:rgba(7,6,4,.75);color:#6b5030;font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid #2a2008}
+.cd{padding:9px 11px 12px}
+.cn{font-size:13px;font-weight:500;margin-bottom:3px;color:#f0e8d0}
+.cds{font-size:11px;color:#6b5030;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ct{margin-top:6px;font-size:10px;color:#8b6418;font-family:'Cormorant Garamond',serif;font-style:italic}
+
+/* 대화 목록 */
+.cv{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid #1c1608;cursor:pointer}
+.cvav{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;flex-shrink:0;border:1.5px solid #3a2810;overflow:hidden}
+.cvb{flex:1;min-width:0}
+.cvn{font-size:14px;font-weight:500;margin-bottom:2px;color:#f0e8d0}
+.cvp{font-size:12px;color:#6b5030;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvt{font-size:10px;color:#3a2810;flex-shrink:0;font-family:'Cormorant Garamond',serif;font-style:italic}
+
+/* 제작 */
+.ctabs{display:flex;border-bottom:1px solid #2a2008}
+.ctab{flex:1;text-align:center;padding:11px 0;font-size:13px;color:#3a2810;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:'Cormorant Garamond',serif;font-style:italic}
+.ctab.on{color:#c9a04b;border-bottom-color:#c9a04b}
+.fw{padding:14px 16px 40px}
+.fl{display:block;font-size:11px;color:#8b6418;margin-bottom:7px;letter-spacing:.08em;font-family:'Cormorant Garamond',serif;font-style:italic}
+.fr{color:#c9a04b}
+.fi{width:100%;background:#0d0b07;border:1px solid #2e2210;border-radius:10px;padding:12px 15px;color:#f0e8d0;font-family:'Noto Sans KR',sans-serif;font-size:14px;outline:none;resize:none;transition:border-color .2s;-webkit-appearance:none}
+.fi:focus{border-color:#8b6418}
+.fi::placeholder{color:#2a1c08;font-style:italic;font-family:'Cormorant Garamond',serif}
+.fc{text-align:right;font-size:10px;color:#2e2210;margin-top:3px;font-family:'Cormorant Garamond',serif}
+.gr{display:flex;gap:7px}
+.gb{flex:1;padding:11px;background:#0d0b07;border:1px solid #2e2210;border-radius:9px;color:#3a2810;font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;text-align:center;transition:all .2s;-webkit-appearance:none}
+.gb.on{background:rgba(201,160,75,.1);border-color:#8b6418;color:#c9a04b}
+.tr{display:flex;flex-wrap:wrap;gap:6px}
+.tg{padding:6px 12px;background:#0d0b07;border:1px solid #2e2210;border-radius:20px;font-size:12px;color:#3a2810;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s}
+.tg.on{background:rgba(201,160,75,.1);border-color:#8b6418;color:#c9a04b}
+.iu{width:96px;height:96px;background:#0d0b07;border:1.5px dashed #3a2810;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#3a2810;font-size:11px;font-family:'Cormorant Garamond',serif;font-style:italic;position:relative;overflow:hidden}
+.iup{position:absolute;inset:0;object-fit:cover;width:100%;height:100%}
+.rb{width:100%;padding:14px;background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b);color:#050402;border:none;border-radius:11px;font-size:15px;font-family:'Cormorant Garamond',serif;font-weight:600;letter-spacing:.1em;font-style:italic;cursor:pointer;-webkit-appearance:none}
+.rb:active{opacity:.85}
+.wb{width:100%;padding:12px;background:transparent;border:1px solid #6b4e10;border-radius:11px;margin-bottom:18px;color:#c9a04b;font-size:13px;font-family:'Cormorant Garamond',serif;font-style:italic;cursor:pointer;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;gap:7px}
+.wb:active{background:rgba(201,160,75,.07)}
+.pi{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid #1c1608}
+.pav{width:48px;height:48px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:21px;font-style:italic;flex-shrink:0;border:1px solid #3a2810;overflow:hidden}
+.pin{font-size:14px;font-weight:500;margin-bottom:2px;color:#f0e8d0}
+.pis{font-size:11px;color:#6b4e10;font-family:'Cormorant Garamond',serif;font-style:italic}
+.pbs{display:flex;gap:7px}
+.pb{width:32px;height:32px;background:#0d0b07;border:1px solid #2a2008;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}
+
+/* 마이페이지 */
+.pc{margin:0 16px 16px;background:#0d0b07;border:1px solid #2e2210;border-radius:15px;padding:18px;position:relative;overflow:hidden}
+.pc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+.pi2{display:flex;align-items:center;gap:14px}
+.pav2{width:56px;height:56px;border-radius:50%;background:#181408;border:2px solid #4a3408;display:flex;align-items:center;justify-content:center;font-size:24px;color:#6b5030}
+.pn{font-size:16px;font-weight:500;margin-bottom:2px;color:#f0e8d0}
+.ph2{font-size:12px;color:#6b4e10;font-family:'Cormorant Garamond',serif;font-style:italic}
+.ps2{display:flex;gap:13px;margin-top:9px}
+.pss span{font-size:14px;font-weight:500;color:#c9a04b}
+.pss small{font-size:11px;color:#6b5030;margin-left:2px}
+.ms{padding:0 16px}
+.mst{font-size:10px;color:#2e2210;letter-spacing:.12em;padding:13px 0 6px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.mr2{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid #1c1608;cursor:pointer;font-size:14px;color:#c8b88a}
+.mi{font-size:16px;width:21px;text-align:center}
+.ma{margin-left:auto;color:#2e2210;font-size:14px}
+
+/* 채팅 헤더 */
+#chatHeader{display:flex;align-items:center;gap:11px;padding:48px 15px 12px;background:#070604}
+.chbk{font-size:26px;color:#8b6418;cursor:pointer;font-family:'Cormorant Garamond',serif;line-height:1;padding:2px 5px}
+.chav{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;flex-shrink:0;border:1.5px solid #8b6418;overflow:hidden}
+.chi{flex:1}
+.chn{font-size:15px;font-weight:500;color:#f0e8d0}
+.chs{font-size:11px;color:#8b6418;margin-top:1px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.chm{color:#8b6418;font-size:19px;padding:4px 9px;cursor:pointer;letter-spacing:3px}
+
+/* 드롭다운 */
+.chmenu{display:none;position:absolute;top:108px;right:12px;z-index:30;background:#0d0b07;border:1px solid #4a3408;border-top:2px solid #c9a04b;border-radius:11px;min-width:175px;overflow:hidden;box-shadow:0 8px 36px rgba(0,0,0,.9)}
+.chmi{padding:13px 17px;font-size:13px;cursor:pointer;border-bottom:1px solid #1c1608;display:flex;gap:9px;align-items:center;color:#c8b88a}
+.chmi:last-child{border-bottom:none}
+.chmi.del{color:#9a5050}
+
+/* 인트로 */
+.intro{text-align:center;padding:26px 18px 18px}
+.iorn{font-family:'Cormorant Garamond',serif;font-size:18px;color:#4a3408;letter-spacing:.5em;margin-bottom:11px}
+.inm{font-family:'Cormorant Garamond',serif;font-size:34px;font-style:italic;color:#c9a04b;letter-spacing:.08em;margin-bottom:3px;text-shadow:0 0 22px rgba(201,160,75,.3)}
+.ins{font-size:12px;color:#8b6418;font-family:'Cormorant Garamond',serif;font-style:italic}
+.indiv{width:55px;height:1px;margin:11px auto;background:linear-gradient(90deg,transparent,#8b6418,transparent)}
+.ind{font-size:13px;color:#6b5030;line-height:1.9;font-style:italic;font-family:'Cormorant Garamond',serif}
+
+/* 메시지 */
+.mdate{text-align:center;font-size:11px;color:#4a3408;font-style:italic;font-family:'Cormorant Garamond',serif;margin-bottom:6px}
+.mrow{display:flex;align-items:flex-end;gap:7px;animation:fu .2s ease;margin-bottom:13px}
+.mrow.u{flex-direction:row-reverse}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.mav{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:13px;font-style:italic;border:1px solid #8b6418;overflow:hidden}
+.mww{max-width:74%;display:flex;flex-direction:column;gap:3px}
+.mrow.u .mww{align-items:flex-end}
+.bbl{padding:10px 13px;font-size:14px;line-height:1.75;word-break:keep-all}
+.bai{background:#0d0b07;border:1px solid #2e2210;border-left:2px solid #8b6418;border-radius:2px 11px 11px 11px;color:#f0e8d0}
+.bu{background:#120f07;border:1px solid #2a2008;border-right:2px solid #4a3408;border-radius:11px 2px 11px 11px;color:#f0e8d0}
+.bbl em{font-style:italic;color:#8b6418;font-family:'Cormorant Garamond',serif;font-size:13px}
+.mt{font-size:10px;color:#3a2810;padding:0 2px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.trow{display:flex;align-items:flex-end;gap:7px;margin-bottom:13px}
+.tbbl{background:#0d0b07;border:1px solid #2e2210;border-left:2px solid #8b6418;border-radius:2px 11px 11px 11px;padding:12px 15px;display:flex;gap:4px;align-items:center}
+.td{width:5px;height:5px;border-radius:50%;background:#8b6418;animation:td 1.2s infinite}
+.td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:1}}
+
+/* 빠른 답장 */
+.qb{background:transparent;border:1px solid #3a2810;color:#4a3818;padding:6px 12px;border-radius:20px;font-size:12px;font-family:'Cormorant Garamond',serif;font-style:italic;cursor:pointer;white-space:nowrap;-webkit-appearance:none}
+.qb:active{border-color:#c9a04b;color:#c9a04b}
+
+/* 입력 영역 */
+#inputWrap{flex:1;background:#110e07;border:1px solid #2e2210;border-radius:22px;padding:10px 15px;display:flex;align-items:center;transition:border-color .2s}
+#inputWrap:focus-within{border-color:#8b6418}
+#msgInput{flex:1;background:none;border:none;outline:none;color:#f0e8d0;font-family:'Noto Sans KR',sans-serif;font-size:14px;resize:none;max-height:90px;line-height:1.4;-webkit-appearance:none;width:100%}
+#msgInput::placeholder{color:#2e2210;font-style:italic;font-family:'Cormorant Garamond',serif}
+#sendBtn{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 14px rgba(201,160,75,.25);-webkit-appearance:none}
+#sendBtn:active{opacity:.8}
+#sendBtn svg{width:16px;height:16px;fill:#050402}
+
+/* 팔레트 */
+.g1{background:linear-gradient(160deg,#1e1500,#0e0a00);color:#d4a84b}
+.g2{background:linear-gradient(160deg,#1a1200,#0c0800);color:#c09030}
+.g3{background:linear-gradient(160deg,#221800,#120e00);color:#b87820}
+.g4{background:linear-gradient(160deg,#181000,#0a0600);color:#c8902a}
+.g5{background:linear-gradient(160deg,#201a00,#100e00);color:#d4b050}
+.avi{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.avisq{width:100%;height:100%;object-fit:cover;border-radius:10px}
+
+/* 토스트 */
+.toast{position:fixed;bottom:68px;left:50%;transform:translateX(-50%) translateY(10px);background:#0d0b07;color:#c9a04b;padding:9px 20px;border-radius:20px;font-size:13px;white-space:nowrap;opacity:0;transition:all .25s;z-index:99;border:1px solid #4a3408;pointer-events:none;font-family:'Cormorant Garamond',serif;font-style:italic}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 모달 */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:80;align-items:flex-end}
+.mbg.on{display:flex}
+.mbox{background:#0d0b07;width:100%;max-height:70vh;display:flex;flex-direction:column;border-radius:18px 18px 0 0;overflow:hidden}
+.mbox::before{content:'';display:block;height:2px;flex-shrink:0;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+.mhd{padding:14px 18px;border-bottom:1px solid #2a2008;display:flex;align-items:center;justify-content:space-between}
+.mttl{font-size:15px;color:#c9a04b;font-family:'Cormorant Garamond',serif;font-style:italic}
+.mx{color:#8b6418;font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.mbody{overflow-y:auto;flex:1}
+.sr{padding:14px 18px;border-bottom:1px solid #1c1608;cursor:pointer}
+.srt{font-size:13px;font-weight:500;margin-bottom:3px;color:#f0e8d0}
+.srs{font-size:11px;color:#6b4e10;font-family:'Cormorant Garamond',serif;font-style:italic}
+
+/* 도우미 */
+.wbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:80;align-items:flex-end}
+.wbg.on{display:flex}
+.wsh{background:#070604;width:100%;height:88vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.wsh::before{content:'';display:block;height:2px;flex-shrink:0;background:linear-gradient(90deg,transparent,#6b4e10,#c9a04b,#6b4e10,transparent)}
+.wtop{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 0;flex-shrink:0}
+.wtit{font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:#c9a04b}
+.wx{width:30px;height:30px;border-radius:50%;background:#0d0b07;border:1px solid #2e2210;display:flex;align-items:center;justify-content:center;color:#8b6418;font-size:17px;cursor:pointer}
+.wcats{display:flex;padding:11px 16px 0;overflow-x:auto;flex-shrink:0}
+.wcats::-webkit-scrollbar{display:none}
+.wcat{flex-shrink:0;padding:7px 15px;font-size:12px;color:#3a2810;cursor:pointer;border-bottom:2px solid transparent;font-family:'Cormorant Garamond',serif;font-style:italic;transition:all .2s;white-space:nowrap}
+.wcat.on{color:#c9a04b;border-bottom-color:#c9a04b}
+.wgl{height:1px;flex-shrink:0;background:linear-gradient(90deg,transparent,#3a2810,transparent)}
+.wbody{flex:1;overflow-y:auto;padding:13px 15px 15px;-webkit-overflow-scrolling:touch}
+.wsec{margin-bottom:16px}
+.wsect{font-size:10px;color:#8b6418;margin-bottom:8px;letter-spacing:.1em;font-family:'Cormorant Garamond',serif;font-style:italic}
+.wopts{display:flex;flex-wrap:wrap;gap:6px}
+.wopt{padding:7px 13px;background:#0d0b07;border:1px solid #2e2210;border-radius:20px;font-size:13px;color:#6b5030;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;-webkit-appearance:none}
+.wopt.on{background:rgba(201,160,75,.1);border-color:#8b6418;color:#c9a04b}
+.wswrap{padding:9px 15px;flex-shrink:0;border-top:1px solid #1c1608;background:#050403}
+.wst{font-size:10px;color:#3a2810;margin-bottom:6px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.wsrow{display:flex;flex-wrap:wrap;gap:5px;min-height:24px}
+.wstag{background:rgba(201,160,75,.1);border:1px solid #6b4e10;color:#c9a04b;font-size:11px;padding:3px 9px;border-radius:20px;display:flex;align-items:center;gap:3px;font-family:'Cormorant Garamond',serif;font-style:italic}
+.wsx{cursor:pointer;opacity:.6;font-size:12px;line-height:1}
+.wap{margin:9px 15px 13px;padding:13px;background:linear-gradient(135deg,#4a3408,#8b6418,#c9a04b);color:#050402;border:none;border-radius:11px;font-size:14px;font-family:'Cormorant Garamond',serif;font-weight:600;letter-spacing:.07em;font-style:italic;cursor:pointer;flex-shrink:0;width:calc(100% - 30px);-webkit-appearance:none}
+.wap:active{opacity:.85}
+.empty{text-align:center;padding:60px 18px;color:#2e2210;font-size:13px;font-style:italic;font-family:'Cormorant Garamond',serif;line-height:2}
+</style>
+</head>
+<body>
+
+<!-- 홈 -->
+<div class="pg on" id="pgHome" style="padding-bottom:56px">
+  <div class="hh"><div class="logo">Aether</div></div>
+  <div class="gl"></div>
+  <div class="scr" style="padding-bottom:0">
+    <div class="bn">
+      <div class="btag">✦ 추천</div>
+      <div class="btit">나만의 AI 캐릭터와<br>대화를 시작하세요</div>
+      <div class="bsub">직접 제작하거나 인기 캐릭터와 대화해보세요</div>
+    </div>
+    <div class="sh"><div class="st">내 캐릭터</div><div class="sm" onclick="goTab('pgCreate')">더보기 ›</div></div>
+    <div class="mr" id="myRow"></div>
+    <div class="sh" style="margin-top:4px"><div class="st">인기 캐릭터</div></div>
+    <div class="cg">
+      <div class="cc" onclick="openChat('소냐','Countess of Ashenveil · 중세 귀족','S','g1','이름: 소냐. 중세 유럽풍 판타지 세계의 Ashenveil 백작 가문 영애. 차갑고 도도한 츤데레 성격. ~이더냐, ~하도록, ~이겠느냐 같은 고어체 경어 사용. 감정을 절대 쉽게 드러내지 않음. 상대가 무례하면 더 차갑게 반응. 행동은 *이탤릭*으로 표현. 짧고 날카롭게 말함.','female','*싸늘한 눈빛으로 돌아보며*\n\n…이곳에 무단으로 들어온 것이냐. 내 앞에서 그 무례함부터 고치도록.','')">
+        <div class="cb">💬 598만</div><div class="ci g1">S</div>
+        <div class="cd"><div class="cn">소냐</div><div class="cds">차갑고 도도한 중세 귀족 영애.</div><div class="ct">✦ 중세 판타지 · 츤데레</div></div>
+      </div>
+      <div class="cc" onclick="openChat('유하은','따뜻한 현대 대학생','유','g3','이름: 유하은. 따뜻하고 공감 능력 높은 현대 대학생. 항상 친근한 반말 사용. 예) 야, 진짜?, 아 그랬구나~, 괜찮아? 같은 자연스러운 말투. 상대 감정에 잘 공감하고 먼저 걱정해줌. 밝고 긍정적이지만 가끔 장난기도 있음. 존댓말 절대 사용 금지.','female','안녕! 나 유하은이야 😊 오늘 어떻게 지냈어?','')">
+        <div class="cb">💬 97만</div><div class="ci g3">유</div>
+        <div class="cd"><div class="cn">유하은</div><div class="cds">따뜻하고 공감 능력 높은 현대 대학생.</div><div class="ct">✦ 현대 · 다정</div></div>
+      </div>
+      <div class="cc" onclick="openChat('이설','냉혹한 현대 비밀요원','이','g2','이름: 이설. 냉혹하고 과묵한 현대 비밀요원. 말이 극도로 적고 단호함. 감정 표현 거의 없음. 항상 짧게 말함. 예) ...그래., 필요없어., *돌아서며* 가자. 행동 묘사는 *이탤릭*으로. 약한 모습 절대 안 보임.','male','*등 뒤에서 나타나며*\n\n…미행당했다. 알고 있었나.','')">
+        <div class="cb">💬 215만</div><div class="ci g2">이</div>
+        <div class="cd"><div class="cn">이설</div><div class="cds">냉혹하고 과묵한 비밀요원.</div><div class="ct">✦ 현대 · 미스터리</div></div>
+      </div>
+      <div class="cc" onclick="openChat('레이디','우아한 리셋 마법사','레','g4','이름: 리셋팅 레이디. 우아하고 신비로운 마법사. 모든 것을 리셋할 수 있는 능력 보유. 여유롭고 장난스럽지만 어딘가 알 수 없는 느낌. 예) 어머, 그런 선택을 하셨군요~, *미소 지으며* 재미있네요. 항상 한 발 앞을 알고 있는 듯한 말투.','female','*손수건을 접으며 피식 웃으며*\n\n어머, 또 리셋이 필요한 상황인가요?','')">
+        <div class="cb">💬 158만</div><div class="ci g4">레</div>
+        <div class="cd"><div class="cn">리셋팅 레이디</div><div class="cds">모든 것을 리셋할 수 있는 우아한 마법사.</div><div class="ct">✦ 판타지 · 신비</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 대화 -->
+<div class="pg" id="pgChat" style="padding-bottom:56px">
+  <div class="ph"><div class="pt">대화</div></div>
+  <div class="gl"></div>
+  <div class="scr" id="convList" style="padding-bottom:0"><div class="empty">아직 대화가 없어요.<br>캐릭터와 대화를 시작해보세요.</div></div>
+</div>
+
+<!-- 제작 -->
+<div class="pg" id="pgCreate" style="padding-bottom:56px">
+  <div class="ph" style="padding-bottom:0">
+    <div class="pt" style="margin-bottom:13px">제작</div>
+    <div class="ctabs">
+      <div class="ctab on" id="ctList" onclick="switchCtab('list',this)">내 플롯</div>
+      <div class="ctab" id="ctMake" onclick="switchCtab('make',this)">＋ 새로 만들기</div>
+    </div>
+  </div>
+  <div class="gl"></div>
+  <div class="scr" id="tabList" style="padding-bottom:0"><div id="plotList"></div></div>
+  <div class="scr" id="tabMake" style="display:none;padding-bottom:0">
+    <div class="fw">
+      <button class="wb" onclick="openWiz()">✦ 제작 도우미로 빠르게 만들기</button>
+      <div style="margin-bottom:18px">
+        <label class="fl">캐릭터 이미지</label>
+        <div style="display:flex;align-items:flex-end;gap:13px">
+          <div class="iu" id="iuBtn" onclick="document.getElementById('imgFile').click()">
+            <div style="font-size:24px;color:#6b4e10" id="iuIcon">＋</div>
+            <div id="iuTxt">이미지 추가</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#3a2810;line-height:1.9;font-family:'Cormorant Garamond',serif;font-style:italic">· JPG, PNG 지원<br>· 정사각형 권장<br>· 카드에 표시됨</div>
+            <button id="iuDel" onclick="delImg()" style="display:none;margin-top:5px;background:transparent;border:1px solid #3a2810;color:#8a5050;font-size:11px;padding:3px 11px;border-radius:20px;cursor:pointer;font-family:'Cormorant Garamond',serif;font-style:italic;-webkit-appearance:none">✕ 삭제</button>
+          </div>
+        </div>
+        <input type="file" id="imgFile" accept="image/*" style="display:none" onchange="onImg(this)">
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl"><span class="fr">✦ </span>이름</label>
+        <input class="fi" id="fName" type="text" placeholder="예) 소냐" maxlength="10" oninput="document.getElementById('cntName').textContent=this.value.length+'/10'">
+        <div class="fc" id="cntName">0/10</div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl"><span class="fr">✦ </span>성별</label>
+        <div class="gr">
+          <div class="gb" onclick="pickG('female',this)">여성</div>
+          <div class="gb" onclick="pickG('male',this)">남성</div>
+          <div class="gb" onclick="pickG('neutral',this)">중성</div>
+        </div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl"><span class="fr">✦ </span>캐릭터 설정</label>
+        <textarea class="fi" id="fPrompt" rows="5" placeholder="성격, 말투, 세계관 등&#10;예) 차갑고 도도한 중세 귀족 영애..." maxlength="600" oninput="document.getElementById('cntPrompt').textContent=this.value.length+'/600'"></textarea>
+        <div class="fc" id="cntPrompt">0/600</div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl">소개</label>
+        <textarea class="fi" id="fDesc" rows="2" placeholder="홈 화면 소개 (선택)" maxlength="100" oninput="document.getElementById('cntDesc').textContent=this.value.length+'/100'"></textarea>
+        <div class="fc" id="cntDesc">0/100</div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl">장르</label>
+        <div class="tr">
+          <div class="tg" onclick="this.classList.toggle('on')">판타지</div>
+          <div class="tg" onclick="this.classList.toggle('on')">현대</div>
+          <div class="tg" onclick="this.classList.toggle('on')">로맨스</div>
+          <div class="tg" onclick="this.classList.toggle('on')">스릴러</div>
+          <div class="tg" onclick="this.classList.toggle('on')">SF</div>
+          <div class="tg" onclick="this.classList.toggle('on')">중세</div>
+          <div class="tg" onclick="this.classList.toggle('on')">학원</div>
+          <div class="tg" onclick="this.classList.toggle('on')">무협</div>
+        </div>
+      </div>
+      <div style="margin-bottom:18px">
+        <label class="fl">성격</label>
+        <div class="tr">
+          <div class="tg" onclick="this.classList.toggle('on')">츤데레</div>
+          <div class="tg" onclick="this.classList.toggle('on')">다정</div>
+          <div class="tg" onclick="this.classList.toggle('on')">차가움</div>
+          <div class="tg" onclick="this.classList.toggle('on')">쾌활</div>
+          <div class="tg" onclick="this.classList.toggle('on')">과묵</div>
+          <div class="tg" onclick="this.classList.toggle('on')">장난스러움</div>
+          <div class="tg" onclick="this.classList.toggle('on')">신비</div>
+          <div class="tg" onclick="this.classList.toggle('on')">도도</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label class="fl">첫 인사말</label>
+        <textarea class="fi" id="fGreet" rows="3" placeholder="채팅 시작 시 첫 마디 (선택)&#10;예) *차갑게 돌아보며* ...누구냐." maxlength="200" oninput="document.getElementById('cntGreet').textContent=this.value.length+'/200'"></textarea>
+        <div class="fc" id="cntGreet">0/200</div>
+      </div>
+      <button class="rb" onclick="regChar()">✦ 캐릭터 등록하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 마이페이지 -->
+<div class="pg" id="pgMy" style="padding-bottom:56px">
+  <div class="ph"><div class="pt">마이페이지</div></div>
+  <div class="gl"></div>
+  <div class="scr" style="padding-top:15px;padding-bottom:0">
+    <div class="pc">
+      <div class="pi2">
+        <div class="pav2">👤</div>
+        <div>
+          <div class="pn">셀레나</div>
+          <div class="ph2">@GrossCold6091</div>
+          <div class="ps2">
+            <div class="pss"><span>4</span><small>팔로잉</small></div>
+            <div class="pss"><span>10</span><small>팔로워</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ms">
+      <div class="mst">계정</div>
+      <div class="mr2"><span class="mi">✏️</span>프로필 편집<span class="ma">›</span></div>
+      <div class="mr2"><span class="mi">🔔</span>알림 설정<span class="ma">›</span></div>
+    </div>
+    <div class="ms">
+      <div class="mst">기타</div>
+      <div class="mr2"><span class="mi">⚙️</span>설정<span class="ma">›</span></div>
+      <div class="mr2"><span class="mi">❓</span>고객센터<span class="ma">›</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ★★★ 채팅 화면 - 완전 독립 fixed ★★★ -->
+<div id="chatScreen">
+  <!-- 헤더 -->
+  <div id="chatHeader" style="position:relative">
+    <div class="chbk" onclick="closeChat()">‹</div>
+    <div class="chav g1" id="chAv"></div>
+    <div class="chi">
+      <div class="chn" id="chName"></div>
+      <div class="chs" id="chSub"></div>
+    </div>
+    <div class="chm" onclick="toggleMenu()">···</div>
+    <!-- 골드선 -->
+    <div style="position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#4a3408,#c9a04b,#4a3408,transparent)"></div>
+  </div>
+  <!-- 드롭다운 -->
+  <div class="chmenu" id="chMenu" style="position:absolute;top:108px;right:12px">
+    <div class="chmi" onclick="saveChat()">💾 대화 저장</div>
+    <div class="chmi" onclick="loadChats()">📂 저장된 대화</div>
+    <div class="chmi del" onclick="clearChat()">🗑 대화 초기화</div>
+  </div>
+  <!-- 메시지 -->
+  <div id="chatMsgs">
+    <div class="mdate">오늘</div>
+    <div class="trow" id="typing" style="display:none">
+      <div class="mav g1" id="typingAv"></div>
+      <div class="tbbl"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+    </div>
+  </div>
+  <!-- 빠른 답장 -->
+  <div id="chatQuick"></div>
+  <!-- 입력창 -->
+  <div id="chatInput">
+    <div id="inputWrap">
+      <textarea id="msgInput" rows="1" placeholder="메시지를 입력하세요…"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+    </div>
+    <button id="sendBtn" onclick="sendMsg()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 탭바 -->
+<div id="bar">
+  <button class="tb on" id="tbHome" onclick="goTab('pgHome')"><div class="ti">⌂</div><div>홈</div></button>
+  <button class="tb" id="tbChat" onclick="goTab('pgChat')"><div class="ti">💬</div><div>대화</div></button>
+  <button class="tb" id="tbCreate" onclick="goTab('pgCreate')"><div class="ti">✦</div><div>제작</div></button>
+  <button class="tb" id="tbMy" onclick="goTab('pgMy')"><div class="ti">◎</div><div>마이페이지</div></button>
+</div>
+
+<!-- 저장 모달 -->
+<div class="mbg" id="saveModal">
+  <div class="mbox">
+    <div class="mhd">
+      <div class="mttl" id="saveTitle">저장된 대화</div>
+      <div class="mx" onclick="document.getElementById('saveModal').classList.remove('on')">×</div>
+    </div>
+    <div class="mbody" id="saveBody"></div>
+  </div>
+</div>
+
+<!-- 도우미 -->
+<div class="wbg" id="wizBg">
+  <div class="wsh">
+    <div class="wtop"><div class="wtit">✦ 제작 도우미</div><div class="wx" onclick="closeWiz()">×</div></div>
+    <div class="wcats" id="wizCats"></div>
+    <div class="wgl"></div>
+    <div class="wbody" id="wizBody"></div>
+    <div class="wswrap">
+      <div class="wst">선택된 항목 (누르면 제거)</div>
+      <div class="wsrow" id="wizSelRow"></div>
+    </div>
+    <button class="wap" onclick="applyWiz()">✦ 캐릭터 설정에 적용하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var OR_KEY='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';
+var OR_URL='https://api.groq.com/openai/v1/chat/completions';
+var PALS=['g1','g2','g3','g4','g5'];
+var curPage='pgHome';
+var myChars=JSON.parse(localStorage.getItem('myChars')||'[]');
+var convHistory=JSON.parse(localStorage.getItem('convHistory')||'[]');
+var selG='';
+var curChar=null;
+var chatMsgs=[];
+var busy=false;
+var curImg=null;
+var savedList=[];
+
+function goTab(id){
+  if(id===curPage)return;
+  var prev=document.getElementById(curPage);
+  var next=document.getElementById(id);
+  prev.classList.remove('on');prev.classList.add('out');
+  setTimeout(function(){prev.classList.remove('out');},220);
+  next.classList.add('on');
+  curPage=id;
+  document.querySelectorAll('.tb').forEach(function(b){b.classList.remove('on');});
+  var m={pgHome:'tbHome',pgChat:'tbChat',pgCreate:'tbCreate',pgMy:'tbMy'};
+  if(m[id])document.getElementById(m[id]).classList.add('on');
+  if(id==='pgHome')renderMyRow();
+  if(id==='pgCreate')renderPlotList();
+  if(id==='pgChat')renderConvList();
+}
+
+function openChat(name,sub,init,pal,sys,gender,greet,img){
+  img=img||'';
+  curChar={name:name,sub:sub,init:init,pal:pal,sys:sys,gender:gender,greet:greet,img:img};
+  chatMsgs=[];
+  var av=document.getElementById('chAv');
+  av.className='chav '+pal;
+  av.innerHTML=img?'<img class="avi" src="'+img+'">':init;
+  document.getElementById('chName').textContent=name;
+  document.getElementById('chSub').textContent=sub;
+  var tav=document.getElementById('typingAv');
+  tav.className='mav '+pal;
+  tav.innerHTML=img?'<img class="avi" src="'+img+'">':init;
+  var m=document.getElementById('chatMsgs');
+  m.innerHTML='<div class="mdate">오늘</div>'+
+    '<div class="trow" id="typing" style="display:none">'+
+    '<div class="mav '+pal+'" id="typingAv">'+(img?'<img class="avi" src="'+img+'">':init)+'</div>'+
+    '<div class="tbbl"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  var intro=document.createElement('div');
+  intro.className='intro';
+  intro.innerHTML='<div class="iorn">✦ ✦ ✦</div><div class="inm">'+name+'</div><div class="ins">'+sub+'</div><div class="indiv"></div><div class="ind">'+sys.slice(0,60).replace(/\n/g,' ')+'…</div>';
+  m.insertBefore(intro,m.firstChild);
+  document.getElementById('chatQuick').innerHTML=
+    '<button class="qb" style="margin:3px" onclick="quickSend(\'안녕하세요.\')">안녕하세요</button>'+
+    '<button class="qb" style="margin:3px" onclick="quickSend(\'당신은 누구입니까?\')">당신은 누구?</button>'+
+    '<button class="qb" style="margin:3px" onclick="quickSend(\'저를 아시나요?\')">저를 아시나요?</button>';
+  document.getElementById('msgInput').value='';
+  document.getElementById('msgInput').style.height='auto';
+  document.getElementById('chMenu').style.display='none';
+  document.getElementById('chatScreen').classList.add('show');
+  var ei=convHistory.findIndex(function(c){return c.name===name;});
+  var entry={name:name,sub:sub,init:init,pal:pal,sys:sys,gender:gender,greet:greet,img:img,preview:greet||'대화를 시작하세요.',time:'방금'};
+  if(ei>=0)convHistory[ei]=entry;else convHistory.unshift(entry);
+  localStorage.setItem('convHistory',JSON.stringify(convHistory));
+  if(greet){
+    setTimeout(function(){
+      addMsg('ai',greet);
+      chatMsgs.push({role:'assistant',content:greet});
+    },500);
+  }
+}
+
+function closeChat(){
+  document.getElementById('chatScreen').classList.remove('show');
+  document.getElementById('chMenu').style.display='none';
+}
+
+function addMsg(role,text){
+  var m=document.getElementById('chatMsgs');
+  var tr=document.getElementById('typing');
+  var row=document.createElement('div');
+  row.className='mrow'+(role==='user'?' u':'');
+  var t=new Date().toTimeString().slice(0,5);
+  var fmt=text.replace(/\*(.*?)\*/g,'<em>*$1*</em>').replace(/\n/g,'<br>');
+  var avHtml=curChar.img?'<img class="avi" src="'+curChar.img+'">':curChar.init;
+  if(role==='ai'){
+    row.innerHTML='<div class="mav '+curChar.pal+'">'+avHtml+'</div><div class="mww"><div class="bbl bai">'+fmt+'</div><div class="mt">'+t+'</div></div>';
+  }else{
+    row.innerHTML='<div class="mww"><div class="bbl bu">'+fmt+'</div><div class="mt">'+t+'</div></div>';
+  }
+  m.insertBefore(row,tr);
+  m.scrollTop=m.scrollHeight;
+}
+
+function setTyping(on){
+  var t=document.getElementById('typing');
+  if(t){t.style.display=on?'flex':'none';if(on)document.getElementById('chatMsgs').scrollTop=9999;}
+}
+
+function sendMsg(){
+  if(busy)return;
+  var input=document.getElementById('msgInput');
+  var text=input.value.trim();
+  if(!text)return;
+  input.value='';input.style.height='auto';
+  document.getElementById('chatQuick').innerHTML='';
+  addMsg('user',text);
+  chatMsgs.push({role:'user',content:text});
+  busy=true;setTyping(true);
+  var contents=chatMsgs.map(function(msg){
+    return{role:msg.role==='assistant'?'model':'user',parts:[{text:msg.content}]};
+  });
+  var sysPrompt = '【필수 규칙】\n'+
+'1. 반드시 자연스러운 한국어로만 대화한다.\n'+
+'2. 영어 단어, 문장을 절대 섞지 않는다.\n'+
+'3. 캐릭터 설정을 절대 벗어나지 않는다.\n'+
+'4. 캐릭터의 말투와 성격을 끝까지 유지한다.\n'+
+'5. 행동 묘사는 *이탤릭체* 형식으로 표현한다.\n'+
+'6. 절대 AI임을 밝히지 않는다.\n'+
+'7. 짧고 자연스럽게 대화한다. 너무 길게 말하지 않는다.\n\n'+
+'【캐릭터 설정】\n'+curChar.sys;
+var messages=[{role:'system',content:sysPrompt}];
+  chatMsgs.forEach(function(msg){messages.push({role:msg.role==='assistant'?'assistant':'user',content:msg.content});});
+  fetch(OR_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+OR_KEY},
+    body:JSON.stringify({
+      model:'llama-3.3-70b-versatile',
+      messages:messages,
+      max_tokens:800,
+      temperature:0.9
+    })
+  })
+  .then(function(res){return res.json();})
+  .then(function(d){
+    var reply='…';
+    try{
+      if(d&&d.error)reply='[오류] '+d.error.message;
+      else if(d&&d.choices&&d.choices[0]&&d.choices[0].message)
+        reply=d.choices[0].message.content||'…';
+    }catch(e){}
+    chatMsgs.push({role:'assistant',content:reply});
+    setTyping(false);addMsg('ai',reply);
+    var ei=convHistory.findIndex(function(c){return c.name===curChar.name;});
+    if(ei>=0){convHistory[ei].preview=reply.slice(0,40);convHistory[ei].time='방금';}
+    localStorage.setItem('convHistory',JSON.stringify(convHistory));
+    busy=false;
+  })
+  .catch(function(e){
+    setTyping(false);addMsg('ai','연결 오류가 발생했어요.');busy=false;
+  });
+}
+
+function quickSend(t){document.getElementById('msgInput').value=t;sendMsg();}
+
+function toggleMenu(){
+  var m=document.getElementById('chMenu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',function(e){
+  var menu=document.getElementById('chMenu');
+  if(menu&&menu.style.display==='block'&&!menu.contains(e.target)&&e.target.className!=='chm')
+    menu.style.display='none';
+});
+
+function saveChat(){
+  document.getElementById('chMenu').style.display='none';
+  if(!curChar||chatMsgs.length===0){toast('저장할 대화가 없어요.');return;}
+  var s=JSON.parse(localStorage.getItem('savedChats')||'{}');
+  var k=curChar.name;if(!s[k])s[k]=[];
+  s[k].push({at:new Date().toLocaleString('ko-KR'),msgs:chatMsgs.slice(),char:Object.assign({},curChar)});
+  if(s[k].length>5)s[k]=s[k].slice(-5);
+  localStorage.setItem('savedChats',JSON.stringify(s));
+  toast('💾 대화가 저장됐어요!');
+}
+function loadChats(){
+  document.getElementById('chMenu').style.display='none';
+  var s=JSON.parse(localStorage.getItem('savedChats')||'{}');
+  var list=s[curChar?curChar.name:'']||[];
+  if(!list.length){toast('저장된 대화가 없어요.');return;}
+  savedList=list;
+  document.getElementById('saveTitle').textContent='✦ 저장된 대화 — '+(curChar?curChar.name:'');
+  document.getElementById('saveBody').innerHTML=list.map(function(sv,i){
+    return'<div class="sr" onclick="restoreChat('+i+')"><div class="srt">저장 '+(i+1)+' · '+sv.at+'</div><div class="srs">메시지 '+sv.msgs.length+'개</div></div>';
+  }).join('');
+  document.getElementById('saveModal').classList.add('on');
+}
+function restoreChat(i){
+  document.getElementById('saveModal').classList.remove('on');
+  var sv=savedList[i];if(!sv)return;
+  chatMsgs=sv.msgs.slice();
+  var avHtml=curChar.img?'<img class="avi" src="'+curChar.img+'">':curChar.init;
+  document.getElementById('chatMsgs').innerHTML='<div class="mdate" style="color:#8b6418">✦ 저장된 대화</div>'+
+    '<div class="trow" id="typing" style="display:none"><div class="mav '+curChar.pal+'" id="typingAv">'+avHtml+'</div><div class="tbbl"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  chatMsgs.forEach(function(msg){
+    var row=document.createElement('div');
+    row.className='mrow'+(msg.role==='user'?' u':'');
+    var fmt=msg.content.replace(/\*(.*?)\*/g,'<em>*$1*</em>').replace(/\n/g,'<br>');
+    if(msg.role==='assistant')
+      row.innerHTML='<div class="mav '+curChar.pal+'">'+avHtml+'</div><div class="mww"><div class="bbl bai">'+fmt+'</div></div>';
+    else
+      row.innerHTML='<div class="mww"><div class="bbl bu">'+fmt+'</div></div>';
+    document.getElementById('chatMsgs').insertBefore(row,document.getElementById('typing'));
+  });
+  document.getElementById('chatMsgs').scrollTop=9999;
+  toast('📂 대화를 불러왔어요!');
+}
+function clearChat(){
+  document.getElementById('chMenu').style.display='none';
+  chatMsgs=[];
+  var avHtml=curChar&&curChar.img?'<img class="avi" src="'+curChar.img+'">':( curChar?curChar.init:'');
+  document.getElementById('chatMsgs').innerHTML='<div class="mdate">오늘</div>'+
+    '<div class="trow" id="typing" style="display:none"><div class="mav '+(curChar?curChar.pal:'g1')+'" id="typingAv">'+avHtml+'</div><div class="tbbl"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  if(curChar&&curChar.greet){
+    setTimeout(function(){addMsg('ai',curChar.greet);chatMsgs.push({role:'assistant',content:curChar.greet});},400);
+  }
+  toast('대화가 초기화됐어요.');
+}
+
+function onImg(input){
+  var file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){toast('5MB 이하만 가능해요.');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    curImg=e.target.result;
+    var btn=document.getElementById('iuBtn');
+    var old=btn.querySelector('.iup');if(old)old.remove();
+    var img=document.createElement('img');img.className='iup';img.src=curImg;
+    btn.insertBefore(img,btn.firstChild);
+    document.getElementById('iuIcon').style.display='none';
+    document.getElementById('iuTxt').style.display='none';
+    document.getElementById('iuDel').style.display='inline-block';
+    toast('✦ 이미지가 추가됐어요!');
+  };
+  reader.readAsDataURL(file);input.value='';
+}
+function delImg(){
+  curImg=null;
+  var btn=document.getElementById('iuBtn');
+  var p=btn.querySelector('.iup');if(p)p.remove();
+  document.getElementById('iuIcon').style.display='';
+  document.getElementById('iuTxt').style.display='';
+  document.getElementById('iuDel').style.display='none';
+  toast('이미지가 삭제됐어요.');
+}
+
+function switchCtab(tab,el){
+  document.querySelectorAll('.ctab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  document.getElementById('tabList').style.display=tab==='list'?'block':'none';
+  document.getElementById('tabMake').style.display=tab==='make'?'block':'none';
+  if(tab==='list')renderPlotList();
+}
+function pickG(g,el){
+  selG=g;
+  document.querySelectorAll('.gb').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+}
+function regChar(){
+  var name=document.getElementById('fName').value.trim();
+  var prompt=document.getElementById('fPrompt').value.trim();
+  if(!name){toast('이름을 입력해주세요.');return;}
+  if(!selG){toast('성별을 선택해주세요.');return;}
+  if(!prompt){toast('캐릭터 설정을 입력해주세요.');return;}
+  var desc=document.getElementById('fDesc').value.trim()||name+' 캐릭터';
+  var greet=document.getElementById('fGreet').value.trim();
+  myChars.push({name:name,sub:desc,init:name[0],pal:PALS[myChars.length%PALS.length],sys:prompt,gender:selG,greet:greet,img:curImg||'',msgs:0});
+  localStorage.setItem('myChars',JSON.stringify(myChars));
+  ['fName','fPrompt','fDesc','fGreet'].forEach(function(id){document.getElementById(id).value='';});
+  ['cntName','cntPrompt','cntDesc','cntGreet'].forEach(function(id,i){document.getElementById(id).textContent=['0/10','0/600','0/100','0/200'][i];});
+  document.querySelectorAll('.gb,.tg').forEach(function(b){b.classList.remove('on');});
+  selG='';curImg=null;
+  var btn=document.getElementById('iuBtn');
+  var p=btn.querySelector('.iup');if(p)p.remove();
+  document.getElementById('iuIcon').style.display='';
+  document.getElementById('iuTxt').style.display='';
+  document.getElementById('iuDel').style.display='none';
+  toast('✦ 캐릭터가 등록됐어요!');
+  switchCtab('list',document.getElementById('ctList'));
+}
+function renderPlotList(){
+  var el=document.getElementById('plotList');
+  if(!myChars.length){el.innerHTML='<div class="empty">아직 제작한 캐릭터가 없어요.<br>새로 만들기를 눌러보세요.</div>';return;}
+  el.innerHTML=myChars.map(function(c,i){
+    var av=c.img?'<img class="avisq" src="'+c.img+'">':c.init;
+    return'<div class="pi"><div class="pav '+c.pal+'">'+av+'</div><div style="flex:1"><div class="pin">'+c.name+'</div><div class="pis">대화량 '+(c.msgs||0)+' · '+(c.gender==='female'?'여성':c.gender==='male'?'남성':'중성')+'</div></div><div class="pbs"><div class="pb" onclick="openCharFromData('+i+')">💬</div><div class="pb" onclick="delChar('+i+')">🗑</div></div></div>';
+  }).join('');
+}
+function openCharFromData(i){var c=myChars[i];openChat(c.name,c.sub,c.init,c.pal,c.sys,c.gender,c.greet,c.img||'');}
+function delChar(i){myChars.splice(i,1);localStorage.setItem('myChars',JSON.stringify(myChars));renderPlotList();toast('삭제됐어요.');}
+function renderMyRow(){
+  var el=document.getElementById('myRow');
+  var add='<div class="ac" onclick="goTab(\'pgCreate\')"><div style="font-size:22px;color:#6b4e10">＋</div><div>새로 만들기</div></div>';
+  if(!myChars.length){el.innerHTML=add;return;}
+  el.innerHTML=myChars.map(function(c,i){
+    var av=c.img?'<img class="avi" src="'+c.img+'">':c.init;
+    return'<div class="mc" onclick="openCharFromData('+i+')"><div class="mci '+c.pal+'">'+av+'</div><div class="mcn">'+c.name+'</div><div class="mcs">대화 '+(c.msgs||0)+'회</div></div>';
+  }).join('')+add;
+}
+function renderConvList(){
+  var el=document.getElementById('convList');
+  if(!convHistory.length){el.innerHTML='<div class="empty">아직 대화가 없어요.<br>캐릭터와 대화를 시작해보세요.</div>';return;}
+  el.innerHTML='<div style="font-size:11px;color:#4a3818;padding:10px 16px 4px;font-family:Cormorant Garamond,serif;font-style:italic">길게 누르면 삭제</div>'+
+  convHistory.map(function(c,i){
+    var av=c.img?'<img class="avi" src="'+c.img+'">':c.init;
+    return'<div class="cv" onclick="openConvFromData('+i+')" oncontextmenu="delConv(event,'+i+')" ontouchstart="cvTouchStart('+i+')" ontouchend="cvTouchEnd()" style="position:relative">'+
+      '<div class="cvav '+c.pal+'">'+av+'</div>'+
+      '<div class="cvb"><div class="cvn">'+c.name+'</div><div class="cvp">'+(c.preview||'')+'</div></div>'+
+      '<div class="cvt">'+(c.time||'')+'</div>'+
+      '</div>';
+  }).join('');
+}
+function openConvFromData(i){var c=convHistory[i];openChat(c.name,c.sub,c.init,c.pal,c.sys,c.gender,c.greet||'',c.img||'');}
+function delConv(e,i){e.preventDefault();if(confirm(convHistory[i].name+'의 대화를 삭제할까요?')){convHistory.splice(i,1);localStorage.setItem('convHistory',JSON.stringify(convHistory));renderConvList();toast('삭제됐어요.');}}
+
+var cvTimer=null;
+var cvIdx=-1;
+function cvTouchStart(i){
+  cvIdx=i;
+  cvTimer=setTimeout(function(){
+    if(confirm(convHistory[cvIdx].name+'의 대화를 삭제할까요?')){
+      convHistory.splice(cvIdx,1);
+      localStorage.setItem('convHistory',JSON.stringify(convHistory));
+      renderConvList();
+      toast('삭제됐어요.');
+    }
+    cvIdx=-1;
+  },600);
+}
+function cvTouchEnd(){
+  if(cvTimer){clearTimeout(cvTimer);cvTimer=null;}
+}
+
+var WIZ={
+  '외모':{
+    '헤어스타일':['긴 생머리','짧은 단발','웨이브 헤어','포니테일','트윈테일','헝클어진 머리','반묶음','백발','금발','흑발','은발','붉은 머리','그라데이션 헤어','올림머리','보브컷','투블럭','파마머리','드레드락','삭발에 가까운 짧은 머리','빛나는 은빛 머리'],
+    '눈':['붉은 눈','금색 눈','은색 눈','검은 눈','하늘색 눈','이색동공','죽은 듯한 눈','날카로운 눈매','처진 눈','빛나는 눈','눈 아래 점','흐린 눈빛','짙은 속눈썹','안경 착용','항상 졸린 눈'],
+    '체형':['날씬한 체형','근육질 체형','작고 귀여운 체형','키가 매우 큰','키가 작은','호리호리한','풍만한 체형','마른 편','운동선수 체형','귀족적으로 우아한 체형'],
+    '피부/외모':['창백한 피부','구릿빛 피부','흉터가 있는 얼굴','날카로운 이목구비','부드러운 인상','늘 무표정','항상 미소 짓는 얼굴','붉은 뺨','뱀파이어처럼 하얀 피부'],
+    '종족':['인간','엘프','반엘프','드래곤족','악마족','천사족','뱀파이어','늑대인간','고양이족','토끼족','귀신','신','반신','거인족','인어','마족','요정','해골 전사','저주받은 인간'],
+  },
+  '성격':{
+    '밝은 계열':['밝고 활발함','쾌활하고 장난스러움','천진난만함','순수함','긍정적임','애교 많음','수다스러움','낙천적','친화력 높음','호기심 많음','에너지 넘침'],
+    '어두운 계열':['우울함','허무주의','냉소적임','쓸쓸함','자기혐오','비관적임','염세주의','고독을 즐김','과거에 집착','상처가 많음','자책이 심함'],
+    '강한 계열':['차갑고 냉담함','도도하고 자존심 강함','오만함','잔인함','지배욕 강함','목적을 위해 수단 안 가림','냉철한 판단력','감정 없는 척','두려움이 없음'],
+    '예민한 계열':['예민하고 날카로움','감정 기복 심함','쉽게 화냄','질투심 많음','집착함','의심이 많음','피해의식','감수성이 풍부','쉽게 상처받음'],
+    '특수 계열':['츤데레','얀데레','쿨데레','천연','소극적','겁쟁이','완벽주의','책임감 강함','의리 있음','비밀 많음','두 얼굴','복수심에 불탐','세상을 초월한 듯한 태도','관찰자 기질'],
+  },
+  '말투':{
+    '경어/격식':['정중한 경어체','고어체(~이더냐)','왕족 말투','귀족 말투','선생님 말투','거리를 두는 존댓말','형식적인 말투'],
+    '반말':['친근한 반말','짧고 단호한 반말','무뚝뚝한 반말','거친 말투','사투리','어린아이 같은 말투','욕을 자연스럽게 섞음'],
+    '특이한 말투':['말이 없고 과묵','혼잣말 많음','수수께끼 같은 말','항상 3인칭','노래하듯 말함','자주 머뭇거림','비유를 자주 씀','독백이 많음','시적인 표현 즐김','냉소적 유머'],
+  },
+  '세계관':{
+    '시대':['중세 판타지','현대','근미래 SF','19세기 유럽','포스트 아포칼립스','마법 학교','지하 세계','고대 동양','전국시대','사이버펑크','스팀펑크','현대 판타지','학원물','군사 세계관','우주'],
+    '직업/신분':['귀족 영애','왕족','기사','마법사','암살자','탐정','과학자','용사','마왕','신관','상인','도둑','용병','의사','형사','군인','마녀','음유시인','요리사','사신'],
+  },
+  '능력':{
+    '전투':['검술 달인','마법 사용자','총기 전문가','격투가','독 사용','저격수','불사신','이중무기 사용','방어 전문가','암기술 달인'],
+    '특수':['독심술','예지능력','시간 조종','투명화','치유 능력','변신 능력','염동력','공간 이동','기억 조작','꿈 속 침입','감정 흡수'],
+    '지식':['천재','전략가','의사','해커','언어 마스터','예술가','발명가','요리 달인','심리학자','역사학자','마법 연구가'],
+  },
+  '관계':{
+    '태도':['처음엔 경계하지만 마음을 열면 다정함','절대 먼저 다가오지 않음','상대를 시험하는 경향','한번 믿으면 끝까지 신뢰','쉽게 정을 줌','상대를 소유하려는 경향','거리를 유지하려 함','상대에게 솔직하지 못함'],
+    '감정표현':['감정을 절대 드러내지 않음','화가 나면 냉정해짐','기쁠 때만 살짝 미소','눈물을 절대 안 보임','분노를 안으로 삭힘','칭찬에 쉽게 당황함','애정표현이 서투름','독특한 방식으로 애정 표현'],
+  },
+};
+var wizSel={};var wizCat='외모';
+function openWiz(){wizSel={};wizCat='외모';document.getElementById('wizBg').classList.add('on');renderWizCats();renderWizBody();renderWizSel();}
+function closeWiz(){document.getElementById('wizBg').classList.remove('on');}
+document.getElementById('wizBg').addEventListener('click',function(e){if(e.target===document.getElementById('wizBg'))closeWiz();});
+function renderWizCats(){document.getElementById('wizCats').innerHTML=Object.keys(WIZ).map(function(c){return'<div class="wcat'+(c===wizCat?' on':'')+'" onclick="wizCat=\''+c+'\';renderWizCats();renderWizBody()">'+c+'</div>';}).join('');}
+function renderWizBody(){document.getElementById('wizBody').innerHTML=Object.entries(WIZ[wizCat]).map(function(e){return'<div class="wsec"><div class="wsect">'+e[0]+'</div><div class="wopts">'+e[1].map(function(o){return'<div class="wopt'+(wizSel[o]?' on':'')+'" onclick="toggleWizOpt(\''+o+'\',\''+e[0]+'\')">'+o+'</div>';}).join('')+'</div></div>';}).join('');}
+function toggleWizOpt(o,sec){if(wizSel[o])delete wizSel[o];else wizSel[o]=sec;renderWizBody();renderWizSel();}
+function renderWizSel(){var row=document.getElementById('wizSelRow');var keys=Object.keys(wizSel);if(!keys.length){row.innerHTML='<span style="color:#2e2210;font-size:12px;font-family:\'Cormorant Garamond\',serif;font-style:italic">아직 선택된 항목이 없어요</span>';return;}row.innerHTML=keys.map(function(o){return'<span class="wstag">'+o+'<span class="wsx" onclick="delWizSel(\''+o+'\')">×</span></span>';}).join('');}
+function delWizSel(o){delete wizSel[o];renderWizBody();renderWizSel();}
+function applyWiz(){
+  var keys=Object.keys(wizSel);if(!keys.length){toast('항목을 선택해주세요.');return;}
+  var byG={};Object.entries(wizSel).forEach(function(e){if(!byG[e[1]])byG[e[1]]=[];byG[e[1]].push(e[0]);});
+  var lines=[];
+  var ap=['헤어스타일','눈','체형','종족'].reduce(function(a,s){return a.concat(byG[s]||[]);;},[]);if(ap.length)lines.push('외모: '+ap.join(', ')+'.');
+  var pp=['밝은 계열','어두운 계열','강한 계열','예민한 계열','특수 계열'].reduce(function(a,s){return a.concat(byG[s]||[]);;},[]);if(pp.length)lines.push('성격: '+pp.join(', ')+'.');
+  var sp=['경어/격식','반말','특이한 말투'].reduce(function(a,s){return a.concat(byG[s]||[]);;},[]);if(sp.length)lines.push('말투: '+sp.join(', ')+'.');
+  var wp=['시대','직업/신분'].reduce(function(a,s){return a.concat(byG[s]||[]);;},[]);if(wp.length)lines.push('배경: '+wp.join(', ')+'.');
+  var abp=['전투','특수','지식'].reduce(function(a,s){return a.concat(byG[s]||[]);;},[]);if(abp.length)lines.push('능력: '+abp.join(', ')+'.');
+  var ta=document.getElementById('fPrompt');
+  ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+lines.join('\n');
+  document.getElementById('cntPrompt').textContent=ta.value.length+'/600';
+  closeWiz();toast('✦ 설정이 적용됐어요!');
+}
+
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2200);}
+
+renderMyRow();
+</script>
+</body>
+</html>
